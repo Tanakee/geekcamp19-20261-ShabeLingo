@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { Memo } from "../types";
+import { Memo, SupportedLanguage } from "../types";
 import { useAuth } from "./AuthContext";
 import { subscribeMemos, addMemo as firestoreAddMemo } from "../lib/firestore";
 
@@ -11,6 +11,7 @@ interface MemoContextType {
     audioUrl?: string;
     imageUrl?: string;
     transcription?: string;
+    language?: SupportedLanguage;
   }) => Promise<void>;
   loading: boolean;
 }
@@ -44,6 +45,7 @@ export const MemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     audioUrl?: string;
     imageUrl?: string;
     transcription?: string;
+    language?: SupportedLanguage;
   }) => {
     if (!user) return;
 
@@ -78,6 +80,7 @@ export const MemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       audioUrl: finalAudioUrl,
       imageUrl: finalImageUrl,
       note: memoData.transcription,
+      language: memoData.language || 'en-US',
     });
   };
 

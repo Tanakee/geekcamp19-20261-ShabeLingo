@@ -10,7 +10,7 @@ import { CategorySelector } from '../components/ui/CategorySelector';
 import { useMemoContext } from '../context/MemoContext';
 import { useAuth } from '../context/AuthContext';
 import { subscribeCategories, addCategory } from '../lib/firestore';
-import { Category } from '../types';
+import { Category, LANGUAGES, SupportedLanguage } from '../types';
 
 export default function CreateMemoScreen() {
   const router = useRouter();
@@ -22,6 +22,7 @@ export default function CreateMemoScreen() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
   const [imageUri, setImageUri] = useState<string | undefined>(undefined);
+  const [language, setLanguage] = useState<SupportedLanguage>('en-US');
   
   // Audio State
   const [recording, setRecording] = useState<Audio.Recording | undefined>(undefined);
@@ -108,6 +109,7 @@ export default function CreateMemoScreen() {
         imageUrl: imageUri,
         audioUrl: audioUri,
         transcription: transcription,
+        language: language,
       });
       router.back();
     } catch (e: any) {
@@ -133,6 +135,29 @@ export default function CreateMemoScreen() {
       <Stack.Screen options={{ headerTitle: 'New Memo', headerBackTitle: 'Cancel' }} />
       
       <ScrollView contentContainerStyle={styles.content}>
+        {/* Language Selection */}
+        <View style={styles.section}>
+          <Text style={styles.label}>Language</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
+            {LANGUAGES.map((lang) => (
+              <TouchableOpacity
+                key={lang.code}
+                style={[
+                    styles.langChip,
+                    language === lang.code && styles.langChipSelected
+                ]}
+                onPress={() => setLanguage(lang.code)}
+              >
+                <Text style={{ fontSize: 18, marginRight: 4 }}>{lang.flag}</Text>
+                <Text style={[
+                    styles.langText,
+                    language === lang.code && styles.langTextSelected
+                ]}>{lang.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
+
         {/* Text Input */}
         <View style={styles.section}>
           <Text style={styles.label}>Word / Phrase</Text>
@@ -314,5 +339,31 @@ const styles = StyleSheet.create({
   },
   saveBtn: {
     marginTop: 16,
+  },
+  langChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#e5e5e5',
+    backgroundColor: '#fff',
+  },
+  langChipSelected: {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primary,
+  },
+  langText: {
+    fontSize: 14,
+    color: Colors.mutedForeground,
+  },
+  langTextSelected: {
+    color: '#fff',
+    fontWeight: 'bold',
+  },
+  langFlag: {
+    fontSize: 18,
+    marginRight: 4,
   },
 });

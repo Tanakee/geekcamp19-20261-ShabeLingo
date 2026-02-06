@@ -8,7 +8,7 @@ import { Button } from '../../components/ui/Button';
 import { useMemoContext } from '../../context/MemoContext';
 import { useAuth } from '../../context/AuthContext';
 import { subscribeCategories } from '../../lib/firestore';
-import { Category, Memo } from '../../types';
+import { Category, Memo, LANGUAGES } from '../../types';
 
 export default function MemoDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -50,6 +50,10 @@ export default function MemoDetailScreen() {
   const getCategoryName = (idOrName: string) => {
     const cat = categories[idOrName];
     return cat ? cat.name : idOrName;
+  };
+
+  const getLanguageInfo = (langCode?: string) => {
+    return LANGUAGES.find(l => l.code === langCode) || LANGUAGES[0];
   };
 
   const playSound = async () => {
@@ -111,10 +115,17 @@ export default function MemoDetailScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         {/* Header Info */}
         <View style={styles.header}>
-            <View style={styles.badge}>
-                <Text style={styles.badgeText}>
-                    {getCategoryName(memo.categoryIds && memo.categoryIds.length > 0 ? memo.categoryIds[0] : 'Uncategorized')}
-                </Text>
+            <View style={{ gap: 8, flexDirection: 'row', flexWrap: 'wrap' }}>
+                <View style={styles.badge}>
+                    <Text style={styles.badgeText}>
+                        {getCategoryName(memo.categoryIds && memo.categoryIds.length > 0 ? memo.categoryIds[0] : 'Uncategorized')}
+                    </Text>
+                </View>
+                <View style={[styles.badge, { backgroundColor: '#f0f0f0' }]}>
+                    <Text style={styles.badgeText}>
+                         {getLanguageInfo(memo.language).flag} {getLanguageInfo(memo.language).label}
+                    </Text>
+                </View>
             </View>
             <Text style={styles.date}>
                 {new Date(memo.createdAt).toLocaleDateString()} {new Date(memo.createdAt).toLocaleTimeString()}
@@ -173,9 +184,10 @@ const styles = StyleSheet.create({
     gap: 24,
   },
   header: {
-    flexDirection: 'row',
+    // flexDirection: 'row', 
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start', // Align top if date wraps or multiple badges
+    gap: 8,
   },
   badge: {
     backgroundColor: 'rgba(157, 78, 221, 0.2)',
