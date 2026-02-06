@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, SafeAreaView, Image } from 'react-native';
+import { View, Text, StyleSheet, FlatList, SafeAreaView, Image, TouchableOpacity } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Plus, Play } from 'lucide-react-native';
 import { Colors, Layout } from '../constants/Colors';
@@ -53,33 +53,35 @@ export default function HomeScreen() {
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
         renderItem={({ item }) => (
-          <Card style={styles.card}>
-            <View style={styles.cardContent}>
-              <View style={styles.cardMain}>
-                <View style={styles.cardHeader}>
-                  <View style={styles.badge}>
-                    {/* categoryIds配列の0番目を表示 */}
-                    <Text style={styles.badgeText}>
-                      {getCategoryName(item.categoryIds && item.categoryIds.length > 0 ? item.categoryIds[0] : 'Uncategorized')}
+          <TouchableOpacity onPress={() => router.push(`/memo/${item.id}`)} activeOpacity={0.9}>
+            <Card style={styles.card}>
+              <View style={styles.cardContent}>
+                <View style={styles.cardMain}>
+                  <View style={styles.cardHeader}>
+                    <View style={styles.badge}>
+                      {/* categoryIds配列の0番目を表示 */}
+                      <Text style={styles.badgeText}>
+                        {getCategoryName(item.categoryIds && item.categoryIds.length > 0 ? item.categoryIds[0] : 'Uncategorized')}
+                      </Text>
+                    </View>
+                    <Text style={styles.date}>
+                      {new Date(item.createdAt).toLocaleDateString()}
                     </Text>
                   </View>
-                  <Text style={styles.date}>
-                    {new Date(item.createdAt).toLocaleDateString()}
-                  </Text>
+                  {/* text ではなく originalText を表示 */}
+                  <Text style={styles.cardText} numberOfLines={3}>{item.originalText}</Text>
                 </View>
-                {/* text ではなく originalText を表示 */}
-                <Text style={styles.cardText} numberOfLines={3}>{item.originalText}</Text>
+                
+                {item.imageUrl && (
+                  <Image 
+                    source={{ uri: item.imageUrl }} 
+                    style={styles.cardThumbnail} 
+                    resizeMode="cover"
+                  />
+                )}
               </View>
-              
-              {item.imageUrl && (
-                <Image 
-                  source={{ uri: item.imageUrl }} 
-                  style={styles.cardThumbnail} 
-                  resizeMode="cover"
-                />
-              )}
-            </View>
-          </Card>
+            </Card>
+          </TouchableOpacity>
         )}
         ListEmptyComponent={
           <View style={styles.empty}>
