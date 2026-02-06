@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { Memo, SupportedLanguage } from "../types";
 import { useAuth } from "./AuthContext";
-import { subscribeMemos, addMemo as firestoreAddMemo } from "../lib/firestore";
+import { subscribeMemos, addMemo as firestoreAddMemo, deleteMemo as firestoreDeleteMemo } from "../lib/firestore";
 
 interface MemoContextType {
   memos: Memo[];
@@ -12,7 +12,9 @@ interface MemoContextType {
     imageUrl?: string;
     transcription?: string;
     language?: SupportedLanguage;
+    evaluationText?: string;
   }) => Promise<void>;
+  deleteMemo: (id: string) => Promise<void>;
   loading: boolean;
 }
 
@@ -46,6 +48,7 @@ export const MemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     imageUrl?: string;
     transcription?: string;
     language?: SupportedLanguage;
+    evaluationText?: string;
   }) => {
     if (!user) return;
 
@@ -81,11 +84,22 @@ export const MemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       imageUrl: finalImageUrl,
       note: memoData.transcription,
       language: memoData.language || 'en-US',
+      evaluationText: memoData.evaluationText,
     });
   };
 
+  const deleteMemo = async (id: string) => {
+    if (!user) return;
+    try {
+      await firestoreDeleteMemo(id);
+    } catch (e) {
+      console.error('Failed to delete memo', e);
+      throw e;
+    }
+  };
+
   return (
-    <MemoContext.Provider value={{ memos, addMemo, loading }}>
+    <MemoContext.Provider value={{ memos, addMemo, deleteMemo, loading }}>
       {children}
     </MemoContext.Provider>
   );

@@ -105,6 +105,7 @@ export const addMemo = async (userId: string, data: {
   imageUrl?: string;
   note?: string;
   language?: SupportedLanguage;
+  evaluationText?: string;
 }) => {
   try {
     await addDoc(memosRef, {
@@ -122,6 +123,16 @@ export const addMemo = async (userId: string, data: {
     });
   } catch (error) {
     console.error('Error adding memo:', error);
+    throw error;
+  }
+};
+
+export const deleteMemo = async (memoId: string) => {
+  try {
+    const ref = doc(db, 'memos', memoId);
+    await deleteDoc(ref);
+  } catch (error) {
+    console.error('Error deleting memo:', error);
     throw error;
   }
 };

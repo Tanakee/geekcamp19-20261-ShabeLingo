@@ -1,4 +1,5 @@
 import { Buffer } from 'buffer';
+import { SupportedLanguage } from '../types';
 
 const API_KEY = process.env.EXPO_PUBLIC_AZURE_SPEECH_KEY;
 const REGION = process.env.EXPO_PUBLIC_AZURE_SPEECH_REGION;
@@ -15,12 +16,15 @@ export interface AssessmentResult {
   }>;
 }
 
-export const assessPronunciation = async (audioUri: string, referenceText: string): Promise<AssessmentResult | null> => {
+export const assessPronunciation = async (audioUri: string, referenceText: string, language: SupportedLanguage = 'en-US'): Promise<AssessmentResult | null> => {
   if (!API_KEY || !REGION) {
     throw new Error('Azure API Key or Region not set');
   }
 
-  const endpoint = `https://${REGION}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=en-US&format=detailed`;
+  // language parameter is used in the query string
+  console.log(`[Azure] Starting Assessment. RefText: "${referenceText}", Lang: ${language}`);
+  
+  const endpoint = `https://${REGION}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=${language}&format=detailed`;
 
   const pronunciationParams = {
     ReferenceText: referenceText,
@@ -47,7 +51,7 @@ export const assessPronunciation = async (audioUri: string, referenceText: strin
     const fileResp = await fetch(audioUri);
     const audioBlob = await fileResp.blob();
 
-    console.log('Sending audio to Azure...', endpoint);
+    console.log(`Sending audio to Azure (${language})...`, endpoint);
     
     // Use standard fetch instead of expo-file-system
     const response = await fetch(endpoint, {
@@ -59,6 +63,11 @@ export const assessPronunciation = async (audioUri: string, referenceText: strin
     if (!response.ok) {
         const errorText = await response.text();
         console.error('Azure API Error Body:', errorText);
+        
+        if (response.status === 400 && errorText.includes('Format')) {
+             throw new Error(`Azure API rejected audio format. Status ${response.status}: ${errorText}`);
+        }
+        
         throw new Error(`Azure API failed with status ${response.status}: ${errorText}`);
     }
 
@@ -66,11 +75,24 @@ export const assessPronunciation = async (audioUri: string, referenceText: strin
     console.log('Azure Response:', JSON.stringify(data, null, 2));
 
     if (data.NBest && data.NBest.length > 0) {
-        const assessment = data.NBest[0].PronunciationAssessment;
-        const words = data.NBest[0].Words;
-        return { ...assessment, Words: words };
+        const bestResult = data.NBest[0];
+        // Sometimes scores are nested in PronunciationAssessment, sometimes directly in the result object depending on API version/params
+        const assessment = bestResult.PronunciationAssessment || bestResult;
+        const words = bestResult.Words;
+        
+        // Ensure PronScore exists and is a number
+        if (assessment && typeof assessment.PronScore === 'number') {
+             return { 
+                 AccuracyScore: assessment.AccuracyScore,
+                 FluencyScore: assessment.FluencyScore,
+                 CompletenessScore: assessment.CompletenessScore,
+                 PronScore: assessment.PronScore,
+                 Words: words 
+             };
+        }
     }
     
+    console.warn('Azure Response did not contain valid assessment data:', JSON.stringify(data));
     return null;
 
   } catch (error) {

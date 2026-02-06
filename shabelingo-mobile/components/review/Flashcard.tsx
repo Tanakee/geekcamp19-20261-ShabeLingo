@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { StyleSheet, Text, Pressable, View } from 'react-native';
 import { Colors, Layout } from '../../constants/Colors';
-import { Memo } from '../../lib/mockData';
+import { Memo } from '../../types';
 
 interface FlashcardProps {
   memo: Memo;
@@ -13,17 +13,17 @@ export function Flashcard({ memo, isRevealed, onFlip }: FlashcardProps) {
   return (
     <View style={styles.container}>
       <Pressable onPress={onFlip} style={styles.cardContainer}>
-        {/* Front Side */}
+        {/* Front Side (Question/Hint) */}
         <View style={[styles.card, !isRevealed ? styles.visible : styles.hidden]}>
-          <Text style={styles.text}>{memo.text}</Text>
-          <Text style={styles.subText}>Tap to reveal</Text>
+          <Text style={styles.text}>{memo.note || memo.translatedText || "(No Hint)"}</Text>
+          <Text style={styles.subText}>Tap to reveal answer</Text>
         </View>
 
-        {/* Back Side */}
+        {/* Back Side (Answer/Word) */}
         <View style={[styles.card, styles.cardBack, isRevealed ? styles.visible : styles.hidden]}>
-          <Text style={styles.text}>{memo.transcription || 'No transcription'}</Text>
-          {memo.category && (
-             <Text style={styles.category}>{memo.category}</Text>
+          <Text style={styles.text}>{memo.originalText}</Text>
+          {memo.evaluationText && (
+              <Text style={styles.subText}>({memo.evaluationText})</Text>
           )}
         </View>
       </Pressable>

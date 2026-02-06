@@ -1,13 +1,51 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, Alert, Platform } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { Audio } from 'expo-av';
-import { ChevronLeft, RefreshCw, Check } from 'lucide-react-native';
+import { ChevronLeft, RefreshCw, Check, Mic, Square } from 'lucide-react-native';
 import { Colors, Layout } from '../constants/Colors';
 import { Button } from '../components/ui/Button';
 import { Flashcard } from '../components/review/Flashcard';
 import { useMemoContext } from '../context/MemoContext';
-import { Mic, Square } from 'lucide-react-native';
+import { assessPronunciation } from '../lib/azure';
+import { 
+  useAudioRecorder, 
+  useAudioRecorderState, 
+  RecordingPresets, 
+  requestRecordingPermissionsAsync,
+  setAudioModeAsync,
+  AndroidOutputFormat,
+  AndroidAudioEncoder,
+  IOSOutputFormat,
+  AudioQuality
+} from 'expo-audio';
+
+// Custom recording options for Azure compatibility
+const AZURE_RECORDING_OPTIONS = {
+  ...RecordingPresets.HIGH_QUALITY,
+  android: {
+    extension: '.wav',
+    outputFormat: 'default' as AndroidOutputFormat,
+    audioEncoder: 'default' as AndroidAudioEncoder,
+    sampleRate: 16000,
+    numberOfChannels: 1,
+    bitRate: 256000,
+  },
+  ios: {
+    extension: '.wav',
+    outputFormat: IOSOutputFormat.LINEARPCM,
+    audioQuality: AudioQuality.MAX,
+    sampleRate: 16000,
+    numberOfChannels: 1,
+    bitRate: 256000,
+    linearPCMBitDepth: 16,
+    linearPCMIsBigEndian: false,
+    linearPCMIsFloat: false,
+  },
+  web: {
+    mimeType: 'audio/webm',
+    bitsPerSecond: 128000,
+  }
+};
 
 export default function ReviewScreen() {
   const router = useRouter();
@@ -16,11 +54,26 @@ export default function ReviewScreen() {
   const [isRevealed, setIsRevealed] = useState(false);
   const [sessionState, setSessionState] = useState<'reading' | 'result'>('reading');
   const [score, setScore] = useState<number | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
   
-  // Recorder State
-  const [recording, setRecording] = useState<Audio.Recording | null>(null);
+  // Expo Audio Recorder
+  const recorder = useAudioRecorder(AZURE_RECORDING_OPTIONS, (status) => {
+    // console.log('Recording Status:', status);
+  });
+  const recorderState = useAudioRecorderState(recorder);
   
   const currentMemo = memos[currentIndex];
+
+  useEffect(() => {
+    // Determine audio mode for recording
+    const setupAudio = async () => {
+       await setAudioModeAsync({
+          allowsRecording: true,
+          playsInSilentMode: true,
+       });
+    };
+    setupAudio();
+  }, []);
 
   const handleNext = () => {
     if (currentIndex < memos.length - 1) {
@@ -36,24 +89,56 @@ export default function ReviewScreen() {
 
   const startRecording = async () => {
     try {
-      await Audio.setAudioModeAsync({ allowsRecordingIOS: true, playsInSilentModeIOS: true });
-      const { recording } = await Audio.Recording.createAsync(Audio.RecordingOptionsPresets.HIGH_QUALITY);
-      setRecording(recording);
+      const perm = await requestRecordingPermissionsAsync();
+      if (perm.status !== 'granted') {
+         Alert.alert('Permission needed', 'Microphone permission is required.');
+         return;
+      }
+
+      await recorder.prepareToRecordAsync();
+      recorder.record();
     } catch (e) {
       console.error(e);
+      Alert.alert('Error', 'Could not start recording.');
     }
   };
 
   const stopRecording = async () => {
-    if (!recording) return;
-    setRecording(null);
-    await recording.stopAndUnloadAsync();
-    // Simulate scoring
-    setTimeout(() => {
-      setScore(Math.floor(Math.random() * 20) + 80);
+    if (!recorderState.isRecording) return;
+    
+    try {
+      await recorder.stop();
+      // wait a bit for file to be ready? usually stop() is enough.
+      
+      const uri = recorder.uri;
+      if (!uri) throw new Error('No audio URI');
+      
+      setAnalyzing(true);
+
+      // Call Azure API
+      const result = await assessPronunciation(
+          uri, 
+          // Use evaluationText if available (for corrected spelling), otherwise originalText
+          currentMemo.evaluationText || currentMemo.originalText, 
+          currentMemo.language
+      );
+
+      if (result) {
+          setScore(Math.round(result.PronScore));
+      } else {
+          Alert.alert('Try Again', 'Could not assess pronunciation clearly.');
+          setScore(0);
+      }
+
       setSessionState('result');
-      setIsRevealed(true); // Reveal card on result
-    }, 1000);
+      setIsRevealed(true); 
+
+    } catch (e) {
+      console.error('Assessment Error:', e);
+      Alert.alert('Error', 'Failed to connect to pronunciation service.');
+    } finally {
+        setAnalyzing(false);
+    }
   };
 
   if (!currentMemo) return <View />;
@@ -79,15 +164,18 @@ export default function ReviewScreen() {
         <View style={styles.interaction}>
           {sessionState === 'reading' ? (
             <View style={styles.recordArea}>
-              <Text style={styles.instruction}>Tap & Speak</Text>
+              <Text style={styles.instruction}>
+                  {analyzing ? "Analyzing..." : "Tap & Speak"}
+              </Text>
               <Button 
-                variant={recording ? 'destructive' : 'primary'}
+                variant={recorderState.isRecording ? 'destructive' : 'primary'}
                 size="lg"
-                icon={recording ? <Square size={32} color="#fff" /> : <Mic size={32} color="#fff" />}
-                onPress={recording ? stopRecording : startRecording}
+                icon={recorderState.isRecording ? <Square size={32} color="#fff" /> : <Mic size={32} color="#fff" />}
+                onPress={recorderState.isRecording ? stopRecording : startRecording}
                 style={styles.recordBtn}
+                disabled={analyzing}
               />
-              <Button variant="ghost" title="Skip" onPress={handleNext} />
+              {!recorderState.isRecording && !analyzing && <Button variant="ghost" title="Skip" onPress={handleNext} />}
             </View>
           ) : (
              <View style={styles.resultArea}>
@@ -95,7 +183,9 @@ export default function ReviewScreen() {
                    <Text style={styles.scoreVal}>{score}</Text>
                    <Text style={styles.scoreLbl}>SCORE</Text>
                 </View>
-                <Text style={styles.feedback}>Great job!</Text>
+                <Text style={styles.feedback}>
+                    {score && score >= 80 ? 'Great job!' : score && score >= 60 ? 'Good!' : 'Keep practicing!'}
+                </Text>
                 
                 <View style={styles.actions}>
                   <Button variant="secondary" title="Retry" icon={<RefreshCw size={20} color="#000" />} onPress={() => setSessionState('reading')} style={{ flex: 1 }} />
