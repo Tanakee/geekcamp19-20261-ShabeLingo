@@ -11,7 +11,7 @@ import {
   getDocs
 } from 'firebase/firestore';
 import { db } from './firebase';
-import { Category, User } from '../types';
+import { Category, User, SupportedLanguage } from '../types';
 
 // コレクション参照
 const categoriesRef = collection(db, 'categories');
@@ -104,6 +104,7 @@ export const addMemo = async (userId: string, data: {
   audioUrl?: string;
   imageUrl?: string;
   note?: string;
+  language?: SupportedLanguage;
 }) => {
   try {
     await addDoc(memosRef, {

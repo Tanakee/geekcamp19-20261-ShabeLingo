@@ -9,6 +9,16 @@ export interface User {
 
 export type ReviewStatus = 'new' | 'learning' | 'review' | 'remembered';
 
+export type SupportedLanguage = 'en-US' | 'zh-CN' | 'es-ES' | 'fr-FR' | 'ja-JP';
+
+export const LANGUAGES: { code: SupportedLanguage; label: string; flag: string }[] = [
+  { code: 'en-US', label: 'English', flag: '🇺🇸' },
+  { code: 'zh-CN', label: 'Chinese', flag: '🇨🇳' },
+  { code: 'es-ES', label: 'Spanish', flag: '🇪🇸' },
+  { code: 'fr-FR', label: 'French', flag: '🇫🇷' },
+  { code: 'ja-JP', label: 'Japanese', flag: '🇯🇵' },
+];
+
 export interface Memo {
   id: string;
   userId: string;
@@ -20,6 +30,9 @@ export interface Memo {
   audioUrl?: string;       // 録音データURL (Storageパス)
   imageUrl?: string;       // 画像URL (Storageパス)
   
+  // 言語 (New)
+  language?: SupportedLanguage;
+
   // 分類
   categoryIds: string[];   // 複数のカテゴリーに属せるように配列
   tags?: string[];
