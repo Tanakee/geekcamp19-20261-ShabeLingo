@@ -178,6 +178,17 @@ export default function CreateScreen() {
             />
           )}
         </View>
+
+        {/* Save Button (Bottom) */}
+        <View style={{ marginTop: 16, marginBottom: 32 }}>
+          <Button 
+            variant="primary" 
+            size="lg" 
+            title="Save Memo" 
+            icon={<Check size={20} color="#fff" />}
+            onPress={handleSave}
+          />
+        </View>
       </ScrollView>
     </View>
   );
