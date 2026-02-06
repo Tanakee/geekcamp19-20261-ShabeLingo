@@ -1,196 +1,235 @@
-import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, Alert } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, TextInput, StyleSheet, Image, ScrollView, SafeAreaView, TouchableOpacity, Alert } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { Audio } from 'expo-av';
+import { Camera, Mic, Square, Trash2 } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { Mic, Square, Camera, Check, X, Play, Trash2 } from 'lucide-react-native';
+import { Audio } from 'expo-av';
 import { Colors, Layout } from '../constants/Colors';
 import { Button } from '../components/ui/Button';
-import { Input } from '../components/ui/Input';
-import { Card } from '../components/ui/Card';
 import { CategorySelector } from '../components/ui/CategorySelector';
 import { useMemoContext } from '../context/MemoContext';
+import { useAuth } from '../context/AuthContext';
+import { subscribeCategories, addCategory } from '../lib/firestore';
+import { Category } from '../types';
 
-export default function CreateScreen() {
+export default function CreateMemoScreen() {
   const router = useRouter();
-  const { addMemo } = useMemoContext();
+  const { user } = useAuth();
+  const { addMemo, loading } = useMemoContext();
+  
   const [text, setText] = useState('');
-  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
-  const [recording, setRecording] = useState<Audio.Recording | null>(null);
-  const [sound, setSound] = useState<Audio.Sound | null>(null);
-  const [audioUri, setAudioUri] = useState<string | null>(null);
-  const [imageUri, setImageUri] = useState<string | null>(null);
+  const [transcription, setTranscription] = useState('');
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
+  const [imageUri, setImageUri] = useState<string | undefined>(undefined);
+  
+  // Audio State
+  const [recording, setRecording] = useState<Audio.Recording | undefined>(undefined);
+  const [audioUri, setAudioUri] = useState<string | undefined>(undefined);
   const [permissionResponse, requestPermission] = Audio.usePermissions();
 
-  async function startRecording() {
+  useEffect(() => {
+    if (!user) return;
+    const unsubscribe = subscribeCategories(user.uid, (data) => {
+      setCategories(data);
+      // Auto-select first category if none selected
+      if (!selectedCategoryId && data.length > 0) {
+        setSelectedCategoryId(data[0].id);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  const handlePickImage = async () => {
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.3, // Reduce quality to ensure Base64 string fits in Firestore (1MB limit)
+    });
+
+    if (!result.canceled) {
+      setImageUri(result.assets[0].uri);
+    }
+  };
+
+  const startRecording = async () => {
     try {
       if (permissionResponse?.status !== 'granted') {
-        const { status } = await requestPermission();
-        if (status !== 'granted') return;
+        const result = await requestPermission();
+        if (!result.granted) {
+            Alert.alert("Permission Required", "Please grant microphone permission to record audio.");
+            return;
+        }
       }
-
+      
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,
         playsInSilentModeIOS: true,
       });
 
       const { recording } = await Audio.Recording.createAsync(
-        Audio.RecordingOptionsPresets.HIGH_QUALITY
+         Audio.RecordingOptionsPresets.HIGH_QUALITY
       );
       setRecording(recording);
     } catch (err) {
-      Alert.alert('Failed to start recording', String(err));
+      console.error('Failed to start recording', err);
+      Alert.alert("Error", "Failed to start recording.");
     }
-  }
-
-  async function stopRecording() {
-    if (!recording) return;
-    setRecording(null);
-    await recording.stopAndUnloadAsync();
-    const uri = recording.getURI();
-    setAudioUri(uri);
-  }
-
-  async function playSound() {
-    if (!audioUri) return;
-    const { sound } = await Audio.Sound.createAsync({ uri: audioUri });
-    setSound(sound);
-    await sound.playAsync();
-  }
-
-  async function pickImage() {
-    const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ['images'],
-      allowsEditing: true,
-      quality: 1,
-    });
-
-    if (!result.canceled) {
-      setImageUri(result.assets[0].uri);
-    }
-  }
-
-  const handleSave = () => {
-    if (!text && !audioUri && !imageUri) {
-      Alert.alert('Empty Memo', 'Please add some content.');
-      return;
-    }
-    
-    addMemo({
-      text: text || 'Audio Note',
-      category: selectedCategoryIds[0] || 'Uncategorized',
-      audioUrl: audioUri || undefined,
-      imageUrl: imageUri || undefined,
-      transcription: text,
-    });
-
-    Alert.alert('Saved!', 'Your memo has been saved.');
-    router.back();
   };
 
-  React.useEffect(() => {
-    return sound
-      ? () => {
-          sound.unloadAsync();
-        }
-      : undefined;
-  }, [sound]);
+  const stopRecording = async () => {
+    if (!recording) return;
+    try {
+        setRecording(undefined);
+        await recording.stopAndUnloadAsync();
+        const uri = recording.getURI();
+        setAudioUri(uri || undefined);
+    } catch (err) {
+        console.error('Failed to stop recording', err);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!text.trim()) {
+      alert('Please enter text');
+      return;
+    }
+    if (!selectedCategoryId) {
+      alert('Please select a category');
+      return;
+    }
+
+    try {
+      await addMemo({
+        text,
+        category: selectedCategoryId,
+        imageUrl: imageUri,
+        audioUrl: audioUri,
+        transcription: transcription,
+      });
+      router.back();
+    } catch (e: any) {
+      alert('Failed to save memo: ' + e.message);
+    }
+  };
+
+  // Category Helper
+  const handleAddCategory = async (name: string) => {
+    if (!user) return;
+    try {
+        const newId = await addCategory(user.uid, name);
+        // CategorySelector will handle selection visually, but we might need to update local state logic if needed
+        return newId;
+    } catch (e) {
+        Alert.alert("Error", "Failed to add category");
+        throw e;
+    }
+  };
 
   return (
-    <View style={styles.container}>
-      <Stack.Screen 
-        options={{
-          headerTitle: 'New Memo',
-          headerLeft: () => (
-            <Button variant="ghost" size="icon" icon={<X size={24} color="#fff" />} onPress={() => router.back()} />
-          ),
-          headerRight: () => (
-            <Button variant="primary" size="sm" title="Save" onPress={handleSave} />
-          ),
-        }} 
-      />
+    <SafeAreaView style={styles.container}>
+      <Stack.Screen options={{ headerTitle: 'New Memo', headerBackTitle: 'Cancel' }} />
       
       <ScrollView contentContainerStyle={styles.content}>
-        {/* Voice Recorder Section */}
-        <Card style={styles.section}>
-          <Text style={styles.label}>Voice Note</Text>
-          <View style={styles.recorderContainer}>
-            {!audioUri ? (
-              <Button
-                variant={recording ? 'destructive' : 'secondary'}
-                size="lg"
-                icon={recording ? <Square size={24} color="#fff" /> : <Mic size={24} color="#000" />}
-                onPress={recording ? stopRecording : startRecording}
-                style={styles.recordBtn}
-              />
-            ) : (
-              <View style={styles.playerContainer}>
-                <Button variant="secondary" size="icon" icon={<Play size={20} />} onPress={playSound} />
-                <Text style={styles.audioLabel}>Audio Recorded</Text>
-                <Button variant="ghost" size="icon" icon={<Trash2 size={20} color={Colors.destructive} />} onPress={() => setAudioUri(null)} />
-              </View>
-            )}
-            {recording && <Text style={styles.recordingText}>Recording...</Text>}
-          </View>
-        </Card>
-
-        {/* Text Input Section */}
-        <Card style={styles.section}>
-          <Input 
-            label="Content" 
-            placeholder="What's this about?" 
-            multiline 
+        {/* Text Input */}
+        <View style={styles.section}>
+          <Text style={styles.label}>Word / Phrase</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="e.g., Hello"
             value={text}
             onChangeText={setText}
+            autoFocus
           />
-        </Card>
+        </View>
 
-        {/* Category Section */}
+        {/* Category */}
         <View style={styles.section}>
           <Text style={styles.label}>Category</Text>
-          <CategorySelector 
-             selectedCategoryIds={selectedCategoryIds}
-             onSelect={(ids) => setSelectedCategoryIds(ids)}
-             multiSelect={false}
+          <CategorySelector
+            selectedCategoryIds={selectedCategoryId ? [selectedCategoryId] : []}
+            onSelect={(ids) => setSelectedCategoryId(ids[0] || '')}
+            multiSelect={false}
           />
         </View>
 
-        {/* Image Picker Section */}
+        {/* Media (Image & Audio) */}
+        <View style={styles.rowSection}>
+            {/* Image Picker */}
+            <View style={styles.mediaCol}>
+                <Text style={styles.label}>Image</Text>
+                <TouchableOpacity onPress={handlePickImage} style={styles.imagePlaceholder}>
+                    {imageUri ? (
+                        <Image source={{ uri: imageUri }} style={styles.imagePreview} />
+                    ) : (
+                        <Camera size={32} color={Colors.mutedForeground} />
+                    )}
+                </TouchableOpacity>
+                {imageUri && (
+                    <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        title="Remove" 
+                        onPress={() => setImageUri(undefined)}
+                        style={{ marginTop: 8 }}
+                    />
+                )}
+            </View>
+
+            {/* Audio Recorder */}
+            <View style={styles.mediaCol}>
+                <Text style={styles.label}>Voice Memo</Text>
+                <View style={styles.audioControl}>
+                    {recording ? (
+                         <TouchableOpacity onPress={stopRecording} style={[styles.recordBtn, styles.recording]}>
+                            <Square size={24} color="#fff" />
+                         </TouchableOpacity>
+                    ) : (
+                        <TouchableOpacity onPress={startRecording} style={styles.recordBtn}>
+                            <Mic size={24} color={audioUri ? Colors.primary : "#fff"} />
+                         </TouchableOpacity>
+                    )}
+                </View>
+                <Text style={styles.audioLabel}>
+                    {recording ? "Recording..." : audioUri ? "Recorded!" : "Tap to Record"}
+                </Text>
+                 {audioUri && !recording && (
+                    <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        title="Delete" 
+                        onPress={() => setAudioUri(undefined)}
+                        style={{ marginTop: 8 }}
+                    />
+                )}
+            </View>
+        </View>
+
+        {/* Notes */}
         <View style={styles.section}>
-          <Text style={styles.label}>Image</Text>
-          {imageUri ? (
-             <View style={styles.imagePreview}>
-               <Image source={{ uri: imageUri }} style={styles.image} />
-               <Button 
-                 variant="destructive" 
-                 size="icon" 
-                 icon={<X size={20} color="#fff" />} 
-                 style={styles.removeImageBtn}
-                 onPress={() => setImageUri(null)}
-               />
-             </View>
-          ) : (
-            <Button 
-              variant="secondary" 
-              icon={<Camera size={20} color="#000" />} 
-              title="Add Image" 
-              onPress={pickImage}
-            />
-          )}
-        </View>
-
-        {/* Save Button (Bottom) */}
-        <View style={{ marginTop: 16, marginBottom: 32 }}>
-          <Button 
-            variant="primary" 
-            size="lg" 
-            title="Save Memo" 
-            icon={<Check size={20} color="#fff" />}
-            onPress={handleSave}
+          <Text style={styles.label}>Notes / Meaning</Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            placeholder="Translation, notes, etc."
+            value={transcription}
+            onChangeText={setTranscription}
+            multiline
+            numberOfLines={4}
           />
         </View>
+
+        <Button
+          variant="primary"
+          size="lg"
+          title={loading ? "Saving..." : "Save Memo"}
+          onPress={handleSave}
+          disabled={loading}
+          style={styles.saveBtn}
+        />
       </ScrollView>
-    </View>
+    </SafeAreaView>
   );
 }
 
@@ -207,48 +246,73 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   label: {
-    color: Colors.mutedForeground,
     fontSize: 14,
-    fontWeight: '500',
-    marginLeft: 4,
+    fontWeight: '600',
+    color: Colors.mutedForeground,
+    marginBottom: 4,
   },
-  recorderContainer: {
+  input: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#e5e5e5',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    color: '#000', // Explicitly black for white background
+  },
+  textArea: {
+    minHeight: 100,
+    textAlignVertical: 'top',
+  },
+  rowSection: {
+    flexDirection: 'row',
+    gap: 16,
+  },
+  mediaCol: {
+    flex: 1,
     alignItems: 'center',
-    gap: 12,
+    backgroundColor: '#fff',
     padding: 16,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e5e5e5',
+  },
+  imagePlaceholder: {
+    width: '100%',
+    aspectRatio: 1,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  imagePreview: {
+    width: '100%',
+    height: '100%',
+  },
+  audioControl: {
+    width: 64,
+    height: 64,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 8,
   },
   recordBtn: {
     width: 64,
     height: 64,
     borderRadius: 32,
-  },
-  recordingText: {
-    color: Colors.destructive,
-    fontWeight: '600',
-  },
-  playerContainer: {
-    flexDirection: 'row',
+    backgroundColor: Colors.secondary,
+    justifyContent: 'center',
     alignItems: 'center',
-    gap: 12,
+  },
+  recording: {
+    backgroundColor: Colors.destructive,
   },
   audioLabel: {
-    color: Colors.foreground,
-    flex: 1,
+    fontSize: 12,
+    color: Colors.mutedForeground,
   },
-  imagePreview: {
-    position: 'relative',
-    borderRadius: Layout.radius,
-    overflow: 'hidden',
-  },
-  image: {
-    width: '100%',
-    height: 200,
-    backgroundColor: '#333',
-  },
-  removeImageBtn: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: 'rgba(0,0,0,0.6)',
+  saveBtn: {
+    marginTop: 16,
   },
 });
