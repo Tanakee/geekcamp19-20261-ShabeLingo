@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, SafeAreaView } from 'react-native';
+import { View, Text, StyleSheet, FlatList, SafeAreaView, Image } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Plus, Play } from 'lucide-react-native';
 import { Colors, Layout } from '../constants/Colors';
@@ -54,19 +54,31 @@ export default function HomeScreen() {
         contentContainerStyle={styles.listContent}
         renderItem={({ item }) => (
           <Card style={styles.card}>
-            <View style={styles.cardHeader}>
-              <View style={styles.badge}>
-                {/* categoryIds配列の0番目を表示 */}
-                <Text style={styles.badgeText}>
-                  {getCategoryName(item.categoryIds && item.categoryIds.length > 0 ? item.categoryIds[0] : 'Uncategorized')}
-                </Text>
+            <View style={styles.cardContent}>
+              <View style={styles.cardMain}>
+                <View style={styles.cardHeader}>
+                  <View style={styles.badge}>
+                    {/* categoryIds配列の0番目を表示 */}
+                    <Text style={styles.badgeText}>
+                      {getCategoryName(item.categoryIds && item.categoryIds.length > 0 ? item.categoryIds[0] : 'Uncategorized')}
+                    </Text>
+                  </View>
+                  <Text style={styles.date}>
+                    {new Date(item.createdAt).toLocaleDateString()}
+                  </Text>
+                </View>
+                {/* text ではなく originalText を表示 */}
+                <Text style={styles.cardText} numberOfLines={3}>{item.originalText}</Text>
               </View>
-              <Text style={styles.date}>
-                {new Date(item.createdAt).toLocaleDateString()}
-              </Text>
+              
+              {item.imageUrl && (
+                <Image 
+                  source={{ uri: item.imageUrl }} 
+                  style={styles.cardThumbnail} 
+                  resizeMode="cover"
+                />
+              )}
             </View>
-            {/* text ではなく originalText を表示 */}
-            <Text style={styles.cardText}>{item.originalText}</Text>
           </Card>
         )}
         ListEmptyComponent={
@@ -101,7 +113,15 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   card: {
+    // Card自体パディングを持っているはずなので、ここでは内部レイアウトには関与しない
+  },
+  cardContent: {
+    flexDirection: 'row',
     gap: 12,
+  },
+  cardMain: {
+    flex: 1,
+    gap: 8,
   },
   cardHeader: {
     flexDirection: 'row',
@@ -130,6 +150,12 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
     lineHeight: 28,
+  },
+  cardThumbnail: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    backgroundColor: '#eee',
   },
   empty: {
     padding: 32,
