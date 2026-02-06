@@ -8,15 +8,14 @@ import { Colors, Layout } from '../constants/Colors';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Card } from '../components/ui/Card';
-import { CATEGORIES } from '../lib/mockData';
-
+import { CategorySelector } from '../components/ui/CategorySelector';
 import { useMemoContext } from '../context/MemoContext';
 
 export default function CreateScreen() {
   const router = useRouter();
   const { addMemo } = useMemoContext();
   const [text, setText] = useState('');
-  const [category, setCategory] = useState(CATEGORIES[0]);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
   const [recording, setRecording] = useState<Audio.Recording | null>(null);
   const [sound, setSound] = useState<Audio.Sound | null>(null);
   const [audioUri, setAudioUri] = useState<string | null>(null);
@@ -79,7 +78,7 @@ export default function CreateScreen() {
     
     addMemo({
       text: text || 'Audio Note',
-      category: category,
+      category: selectedCategoryIds[0] || 'Uncategorized',
       audioUrl: audioUri || undefined,
       imageUrl: imageUri || undefined,
       transcription: text,
@@ -149,23 +148,11 @@ export default function CreateScreen() {
         {/* Category Section */}
         <View style={styles.section}>
           <Text style={styles.label}>Category</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
-            {CATEGORIES.map((cat) => (
-              <TouchableOpacity
-                key={cat}
-                style={[
-                  styles.categoryChip,
-                  category === cat && styles.categoryChipSelected
-                ]}
-                onPress={() => setCategory(cat)}
-              >
-                <Text style={[
-                  styles.categoryText,
-                  category === cat && styles.categoryTextSelected
-                ]}>{cat}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+          <CategorySelector 
+             selectedCategoryIds={selectedCategoryIds}
+             onSelect={(ids) => setSelectedCategoryIds(ids)}
+             multiSelect={false}
+          />
         </View>
 
         {/* Image Picker Section */}
@@ -190,6 +177,17 @@ export default function CreateScreen() {
               onPress={pickImage}
             />
           )}
+        </View>
+
+        {/* Save Button (Bottom) */}
+        <View style={{ marginTop: 16, marginBottom: 32 }}>
+          <Button 
+            variant="primary" 
+            size="lg" 
+            title="Save Memo" 
+            icon={<Check size={20} color="#fff" />}
+            onPress={handleSave}
+          />
         </View>
       </ScrollView>
     </View>
@@ -236,25 +234,6 @@ const styles = StyleSheet.create({
   audioLabel: {
     color: Colors.foreground,
     flex: 1,
-  },
-  categoryScroll: {
-    gap: 8,
-  },
-  categoryChip: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-  },
-  categoryChipSelected: {
-    backgroundColor: Colors.primary,
-  },
-  categoryText: {
-    color: Colors.mutedForeground,
-  },
-  categoryTextSelected: {
-    color: '#fff',
-    fontWeight: '600',
   },
   imagePreview: {
     position: 'relative',
