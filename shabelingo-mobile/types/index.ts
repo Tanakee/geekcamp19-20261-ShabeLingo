@@ -32,6 +32,7 @@ export interface Memo {
   
   // 言語 (New)
   language?: SupportedLanguage;
+  evaluationText?: string; // 発音評価用の正しいスペル (例: original="はろー", evaluation="Hello")
 
   // 分類
   categoryIds: string[];   // 複数のカテゴリーに属せるように配列

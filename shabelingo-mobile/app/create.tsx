@@ -3,7 +3,6 @@ import { View, Text, TextInput, StyleSheet, Image, ScrollView, SafeAreaView, Tou
 import { Stack, useRouter } from 'expo-router';
 import { Camera, Mic, Square, Trash2 } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { Audio } from 'expo-av';
 import { Colors, Layout } from '../constants/Colors';
 import { Button } from '../components/ui/Button';
 import { CategorySelector } from '../components/ui/CategorySelector';
@@ -11,6 +10,45 @@ import { useMemoContext } from '../context/MemoContext';
 import { useAuth } from '../context/AuthContext';
 import { subscribeCategories, addCategory } from '../lib/firestore';
 import { Category, LANGUAGES, SupportedLanguage } from '../types';
+import { 
+  useAudioRecorder, 
+  useAudioRecorderState, 
+  RecordingPresets, 
+  requestRecordingPermissionsAsync,
+  setAudioModeAsync,
+  AndroidOutputFormat,
+  AndroidAudioEncoder,
+  IOSOutputFormat,
+  AudioQuality
+} from 'expo-audio';
+
+// Custom recording options to match ReviewScreen quality (WAV/PCM/High Quality)
+const MEMO_RECORDING_OPTIONS = {
+  ...RecordingPresets.HIGH_QUALITY,
+  android: {
+    extension: '.wav',
+    outputFormat: 'default' as AndroidOutputFormat,
+    audioEncoder: 'default' as AndroidAudioEncoder,
+    sampleRate: 16000,
+    numberOfChannels: 1,
+    bitRate: 256000,
+  },
+  ios: {
+    extension: '.wav',
+    outputFormat: IOSOutputFormat.LINEARPCM,
+    audioQuality: AudioQuality.MAX,
+    sampleRate: 16000,
+    numberOfChannels: 1,
+    bitRate: 256000,
+    linearPCMBitDepth: 16,
+    linearPCMIsBigEndian: false,
+    linearPCMIsFloat: false,
+  },
+  web: {
+    mimeType: 'audio/webm',
+    bitsPerSecond: 128000,
+  }
+};
 
 export default function CreateMemoScreen() {
   const router = useRouter();
@@ -18,16 +56,28 @@ export default function CreateMemoScreen() {
   const { addMemo, loading } = useMemoContext();
   
   const [text, setText] = useState('');
+  const [evaluationText, setEvaluationText] = useState('');
   const [transcription, setTranscription] = useState('');
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
   const [imageUri, setImageUri] = useState<string | undefined>(undefined);
   const [language, setLanguage] = useState<SupportedLanguage>('en-US');
   
-  // Audio State
-  const [recording, setRecording] = useState<Audio.Recording | undefined>(undefined);
+  // Audio State (expo-audio)
   const [audioUri, setAudioUri] = useState<string | undefined>(undefined);
-  const [permissionResponse, requestPermission] = Audio.usePermissions();
+  
+  const recorder = useAudioRecorder(MEMO_RECORDING_OPTIONS, (status) => {
+    // console.log('Memo Recorder Status:', status);
+  });
+  const recorderState = useAudioRecorderState(recorder);
+
+  useEffect(() => {
+    // Init audio mode
+    setAudioModeAsync({
+       allowsRecording: true,
+       playsInSilentMode: true,
+    });
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -47,7 +97,7 @@ export default function CreateMemoScreen() {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [4, 3],
-      quality: 0.3, // Reduce quality to ensure Base64 string fits in Firestore (1MB limit)
+      quality: 0.3, 
     });
 
     if (!result.canceled) {
@@ -57,23 +107,19 @@ export default function CreateMemoScreen() {
 
   const startRecording = async () => {
     try {
-      if (permissionResponse?.status !== 'granted') {
-        const result = await requestPermission();
-        if (!result.granted) {
-            Alert.alert("Permission Required", "Please grant microphone permission to record audio.");
-            return;
-        }
+      const perm = await requestRecordingPermissionsAsync();
+      if (perm.status !== 'granted') {
+          Alert.alert("Permission Required", "Please grant microphone permission to record audio.");
+          return;
       }
       
-      await Audio.setAudioModeAsync({
-        allowsRecordingIOS: true,
-        playsInSilentModeIOS: true,
-      });
+      // Reset previous uri if re-recording
+      if (audioUri) {
+          setAudioUri(undefined);
+      }
 
-      const { recording } = await Audio.Recording.createAsync(
-         Audio.RecordingOptionsPresets.HIGH_QUALITY
-      );
-      setRecording(recording);
+      await recorder.prepareToRecordAsync();
+      recorder.record();
     } catch (err) {
       console.error('Failed to start recording', err);
       Alert.alert("Error", "Failed to start recording.");
@@ -81,11 +127,10 @@ export default function CreateMemoScreen() {
   };
 
   const stopRecording = async () => {
-    if (!recording) return;
+    if (!recorderState.isRecording) return;
     try {
-        setRecording(undefined);
-        await recording.stopAndUnloadAsync();
-        const uri = recording.getURI();
+        await recorder.stop();
+        const uri = recorder.uri;
         setAudioUri(uri || undefined);
     } catch (err) {
         console.error('Failed to stop recording', err);
@@ -105,6 +150,7 @@ export default function CreateMemoScreen() {
     try {
       await addMemo({
         text,
+        evaluationText,
         category: selectedCategoryId,
         imageUrl: imageUri,
         audioUrl: audioUri,
@@ -170,6 +216,18 @@ export default function CreateMemoScreen() {
           />
         </View>
 
+        {/* Evaluation Text Input */}
+        <View style={styles.section}>
+          <Text style={styles.label}>Pronunciation Target (Optional)</Text>
+          <Text style={styles.hint}>If Word/Phrase is in Katakana, enter correct spelling here.</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="e.g., Hello"
+            value={evaluationText}
+            onChangeText={setEvaluationText}
+          />
+        </View>
+
         {/* Category */}
         <View style={styles.section}>
           <Text style={styles.label}>Category</Text>
@@ -207,7 +265,7 @@ export default function CreateMemoScreen() {
             <View style={styles.mediaCol}>
                 <Text style={styles.label}>Voice Memo</Text>
                 <View style={styles.audioControl}>
-                    {recording ? (
+                    {recorderState.isRecording ? (
                          <TouchableOpacity onPress={stopRecording} style={[styles.recordBtn, styles.recording]}>
                             <Square size={24} color="#fff" />
                          </TouchableOpacity>
@@ -218,9 +276,9 @@ export default function CreateMemoScreen() {
                     )}
                 </View>
                 <Text style={styles.audioLabel}>
-                    {recording ? "Recording..." : audioUri ? "Recorded!" : "Tap to Record"}
+                    {recorderState.isRecording ? "Recording..." : audioUri ? "Recorded!" : "Tap to Record"}
                 </Text>
-                 {audioUri && !recording && (
+                 {audioUri && !recorderState.isRecording && (
                     <Button 
                         variant="ghost" 
                         size="sm" 
@@ -320,6 +378,11 @@ const styles = StyleSheet.create({
     height: 64,
     justifyContent: 'center',
     alignItems: 'center',
+    marginBottom: 8,
+  },
+  hint: {
+    fontSize: 12,
+    color: Colors.mutedForeground,
     marginBottom: 8,
   },
   recordBtn: {

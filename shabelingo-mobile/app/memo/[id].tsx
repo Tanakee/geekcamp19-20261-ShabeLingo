@@ -1,27 +1,28 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Image, ScrollView, SafeAreaView, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, Image, ScrollView, SafeAreaView, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { Play, Square } from 'lucide-react-native';
-import { Audio } from 'expo-av';
+import { Play, Square, Trash2 } from 'lucide-react-native';
+// import { Audio } from 'expo-av';
 import { Colors, Layout } from '../../constants/Colors';
 import { Button } from '../../components/ui/Button';
 import { useMemoContext } from '../../context/MemoContext';
 import { useAuth } from '../../context/AuthContext';
 import { subscribeCategories } from '../../lib/firestore';
 import { Category, Memo, LANGUAGES } from '../../types';
+import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
 
 export default function MemoDetailScreen() {
   const { id } = useLocalSearchParams();
   const router = useRouter();
   const { user } = useAuth();
-  const { memos } = useMemoContext();
+  const { memos, deleteMemo } = useMemoContext();
   const [memo, setMemo] = useState<Memo | undefined>(undefined);
   const [categories, setCategories] = useState<Record<string, Category>>({});
   
-  // Audio State
-  const [sound, setSound] = useState<Audio.Sound | undefined>();
-  const [isPlaying, setIsPlaying] = useState(false);
-
+  // Audio Player (expo-audio)
+  const player = useAudioPlayer(memo?.audioUrl || null);
+  const playerStatus = useAudioPlayerStatus(player);
+  
   useEffect(() => {
     if (memos.length > 0 && id) {
       const found = memos.find(m => m.id === id);
@@ -38,14 +39,12 @@ export default function MemoDetailScreen() {
     return () => unsubscribe();
   }, [user]);
 
-  // Clean up sound on unmount or when memo changes
+  // Update player source when memo is loaded
   useEffect(() => {
-    return () => {
-      if (sound) {
-        sound.unloadAsync();
+      if (memo?.audioUrl) {
+          player.replace(memo.audioUrl);
       }
-    };
-  }, [sound]);
+  }, [memo?.audioUrl, player]);
 
   const getCategoryName = (idOrName: string) => {
     const cat = categories[idOrName];
@@ -59,49 +58,48 @@ export default function MemoDetailScreen() {
   const playSound = async () => {
     if (!memo?.audioUrl) return;
 
-    try {
-        if (sound) {
-            if (isPlaying) {
-                await sound.pauseAsync();
-                setIsPlaying(false);
-            } else {
-                await sound.playAsync();
-                setIsPlaying(true);
-            }
-            return;
+    if (playerStatus.playing) {
+        player.pause();
+    } else {
+        // If finished, seek to start
+        if (playerStatus.currentTime >= playerStatus.duration && playerStatus.duration > 0) {
+            player.seekTo(0);
         }
-
-        // Configure audio session
-        await Audio.setAudioModeAsync({ playsInSilentModeIOS: true });
-        
-        console.log('Loading Sound', memo.audioUrl.substring(0, 50) + '...');
-        // Base64 Data URI is supported by createAsync
-        const { sound: newSound } = await Audio.Sound.createAsync(
-            { uri: memo.audioUrl },
-            { shouldPlay: true }
-        );
-        
-        newSound.setOnPlaybackStatusUpdate((status) => {
-            if (status.isLoaded) {
-                 if (status.didJustFinish) {
-                    setIsPlaying(false);
-                    newSound.setPositionAsync(0);
-                }
-            }
-        });
-        
-        setSound(newSound);
-        setIsPlaying(true);
-    } catch (error) {
-        console.error('Failed to play sound', error);
-        alert('Could not play audio');
+        player.play();
     }
+  };
+
+
+  
+  const handleDelete = () => {
+    if (!memo) return;
+    
+    Alert.alert(
+      "Delete Memo",
+      "Are you sure you want to delete this memo?",
+      [
+        { text: "Cancel", style: "cancel" },
+        { 
+          text: "Delete", 
+          style: "destructive",
+          onPress: async () => {
+            try {
+              await deleteMemo(memo.id);
+              router.back();
+            } catch (error) {
+              Alert.alert("Error", "Failed to delete memo");
+            }
+          }
+        }
+      ]
+    );
   };
 
   if (!memo) {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loading}>
+
             <ActivityIndicator size="large" color={Colors.primary} />
         </View>
       </SafeAreaView>
@@ -110,7 +108,17 @@ export default function MemoDetailScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <Stack.Screen options={{ headerTitle: 'Memo Detail', headerBackTitle: 'Back' }} />
+      <Stack.Screen 
+        options={{ 
+          headerTitle: 'Memo Detail', 
+          headerBackTitle: 'Back',
+          headerRight: () => (
+            <TouchableOpacity onPress={handleDelete}>
+              <Trash2 size={24} color={Colors.destructive} />
+            </TouchableOpacity>
+          )
+        }} 
+      />
       
       <ScrollView contentContainerStyle={styles.content}>
         {/* Header Info */}
@@ -148,9 +156,9 @@ export default function MemoDetailScreen() {
         {memo.audioUrl && (
             <View style={styles.audioContainer}>
                 <Button 
-                    variant={isPlaying ? "destructive" : "secondary"}
-                    icon={isPlaying ? <Square size={20} color="#fff" /> : <Play size={20} color="#000" />}
-                    title={isPlaying ? "Pause Audio" : "Play Audio"}
+                    variant={playerStatus.playing ? "destructive" : "secondary"}
+                    icon={playerStatus.playing ? <Square size={20} color="#fff" /> : <Play size={20} color="#000" />}
+                    title={playerStatus.playing ? "Pause Audio" : "Play Audio"}
                     onPress={playSound}
                     style={styles.audioButton}
                 />
