@@ -37,7 +37,12 @@ export function CategorySelector({ selectedCategoryIds, onSelect, multiSelect = 
         onSelect([...selectedCategoryIds, id]);
       }
     } else {
-      onSelect([id]);
+      // Single Select: Toggle if already selected
+      if (selectedCategoryIds.includes(id)) {
+        onSelect([]);
+      } else {
+        onSelect([id]);
+      }
     }
   };
 
@@ -52,8 +57,15 @@ export function CategorySelector({ selectedCategoryIds, onSelect, multiSelect = 
       return;
     }
     try {
-      await addCategory(user.uid, newCategoryName.trim());
+      const newId = await addCategory(user.uid, newCategoryName.trim());
       setIsAdding(false);
+      // Auto-select the new category
+      // 注意: handleSelectはstateを使うので、ここでは直接onSelectを呼んだほうが安全かもしれないが、handleSelectでもよい
+      if (multiSelect) {
+        onSelect([...selectedCategoryIds, newId]);
+      } else {
+        onSelect([newId]);
+      }
     } catch (error) {
       Alert.alert('Error', 'Failed to add category');
     }

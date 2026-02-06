@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, SafeAreaView } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Plus, Play } from 'lucide-react-native';
@@ -6,10 +6,30 @@ import { Colors, Layout } from '../constants/Colors';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { useMemoContext } from '../context/MemoContext';
+import { useAuth } from '../context/AuthContext';
+import { subscribeCategories } from '../lib/firestore';
+import { Category } from '../types';
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { user } = useAuth();
   const { memos } = useMemoContext();
+  const [categories, setCategories] = useState<Record<string, Category>>({});
+
+  useEffect(() => {
+    if (!user) return;
+    const unsubscribe = subscribeCategories(user.uid, (list) => {
+      const map = list.reduce((acc, cat) => ({ ...acc, [cat.id]: cat }), {});
+      setCategories(map);
+    });
+    return () => unsubscribe();
+  }, [user]);
+
+  const getCategoryName = (idOrName: string) => {
+    // IDとして解決できれば名前を、できなければそのまま（モックデータ互換あるいは古いデータ用）
+    const cat = categories[idOrName];
+    return cat ? cat.name : idOrName;
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -36,7 +56,7 @@ export default function HomeScreen() {
           <Card style={styles.card}>
             <View style={styles.cardHeader}>
               <View style={styles.badge}>
-                <Text style={styles.badgeText}>{item.category}</Text>
+                <Text style={styles.badgeText}>{getCategoryName(item.category)}</Text>
               </View>
               <Text style={styles.date}>
                 {new Date(item.createdAt).toLocaleDateString()}
