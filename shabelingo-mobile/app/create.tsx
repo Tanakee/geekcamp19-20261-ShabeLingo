@@ -62,6 +62,8 @@ export default function CreateMemoScreen() {
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
   const [imageUri, setImageUri] = useState<string | undefined>(undefined);
   const [showImageSourceModal, setShowImageSourceModal] = useState(false);
+  const [showLanguageModal, setShowLanguageModal] = useState(false);
+  const [languageSearch, setLanguageSearch] = useState('');
   const [language, setLanguage] = useState<SupportedLanguage>('en-US');
   
   // Audio State (expo-audio)
@@ -211,25 +213,83 @@ export default function CreateMemoScreen() {
         {/* Language Selection */}
         <View style={styles.section}>
           <Text style={styles.label}>言語</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
-            {LANGUAGES.map((lang) => (
-              <TouchableOpacity
-                key={lang.code}
-                style={[
-                    styles.langChip,
-                    language === lang.code && styles.langChipSelected
-                ]}
-                onPress={() => setLanguage(lang.code)}
-              >
-                <Text style={{ fontSize: 18, marginRight: 4 }}>{lang.flag}</Text>
-                <Text style={[
-                    styles.langText,
-                    language === lang.code && styles.langTextSelected
-                ]}>{lang.label}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
+          <TouchableOpacity 
+            style={styles.languageSelector}
+            onPress={() => setShowLanguageModal(true)}
+          >
+            <View style={styles.languageSelectorContent}>
+              <Text style={styles.langFlag}>
+                {LANGUAGES.find(l => l.code === language)?.flag}
+              </Text>
+              <Text style={styles.languageSelectorText}>
+                {LANGUAGES.find(l => l.code === language)?.label}
+              </Text>
+            </View>
+            <Text style={styles.languageSelectorArrow}>▼</Text>
+          </TouchableOpacity>
         </View>
+
+        {/* Language Selection Modal */}
+        <Modal
+          visible={showLanguageModal}
+          animationType="slide"
+          presentationStyle="pageSheet"
+          onRequestClose={() => setShowLanguageModal(false)}
+        >
+          <SafeAreaView style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>言語を選択</Text>
+              <TouchableOpacity onPress={() => setShowLanguageModal(false)}>
+                <Text style={styles.modalClose}>✕</Text>
+              </TouchableOpacity>
+            </View>
+            
+            {/* Search Input */}
+            <View style={styles.searchContainer}>
+              <TextInput
+                style={styles.searchInput}
+                placeholder="言語を検索..."
+                value={languageSearch}
+                onChangeText={setLanguageSearch}
+                autoCapitalize="none"
+              />
+            </View>
+
+            <ScrollView style={styles.languageList}>
+              {LANGUAGES
+                .filter(lang => 
+                  languageSearch === '' || 
+                  lang.label.toLowerCase().includes(languageSearch.toLowerCase()) ||
+                  lang.code.toLowerCase().includes(languageSearch.toLowerCase())
+                )
+                .map((lang) => (
+                  <TouchableOpacity
+                    key={lang.code}
+                    style={[
+                      styles.languageItem,
+                      language === lang.code && styles.languageItemSelected
+                    ]}
+                    onPress={() => {
+                      setLanguage(lang.code);
+                      setShowLanguageModal(false);
+                      setLanguageSearch('');
+                    }}
+                  >
+                    <Text style={styles.languageItemFlag}>{lang.flag}</Text>
+                    <Text style={[
+                      styles.languageItemText,
+                      language === lang.code && styles.languageItemTextSelected
+                    ]}>
+                      {lang.label}
+                    </Text>
+                    {language === lang.code && (
+                      <Text style={styles.languageItemCheck}>✓</Text>
+                    )}
+                  </TouchableOpacity>
+                ))}
+            </ScrollView>
+          </SafeAreaView>
+        </Modal>
 
         {/* Text Input */}
         <View style={styles.section}>
@@ -487,6 +547,94 @@ const styles = StyleSheet.create({
   langFlag: {
     fontSize: 18,
     marginRight: 4,
+  },
+  languageSelector: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: Colors.card,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    padding: 16,
+  },
+  languageSelectorContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  languageSelectorText: {
+    fontSize: 16,
+    color: Colors.foreground,
+    fontWeight: '500',
+  },
+  languageSelectorArrow: {
+    fontSize: 12,
+    color: Colors.mutedForeground,
+  },
+  searchContainer: {
+    padding: 16,
+    paddingTop: 8,
+  },
+  searchInput: {
+    backgroundColor: Colors.muted,
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 16,
+    color: Colors.foreground,
+  },
+  languageList: {
+    flex: 1,
+  },
+  languageItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+    gap: 12,
+  },
+  languageItemSelected: {
+    backgroundColor: 'rgba(88, 204, 2, 0.1)',
+  },
+  languageItemFlag: {
+    fontSize: 24,
+  },
+  languageItemText: {
+    flex: 1,
+    fontSize: 16,
+    color: Colors.foreground,
+  },
+  languageItemTextSelected: {
+    fontWeight: '600',
+    color: Colors.primary,
+  },
+  languageItemCheck: {
+    fontSize: 20,
+    color: Colors.primary,
+    fontWeight: 'bold',
+  },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: Colors.foreground,
+  },
+  modalClose: {
+    fontSize: 24,
+    color: Colors.foreground,
+    fontWeight: '300',
   },
   modalOverlay: {
     flex: 1,

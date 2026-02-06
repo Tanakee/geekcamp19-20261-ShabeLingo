@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { StyleSheet, Text, Pressable, View } from 'react-native';
+import React, { useEffect, useRef } from 'react';
+import { StyleSheet, Text, Pressable, View, Animated } from 'react-native';
 import { Colors, Layout } from '../../constants/Colors';
 import { Memo } from '../../types';
 
@@ -10,22 +10,70 @@ interface FlashcardProps {
 }
 
 export function Flashcard({ memo, isRevealed, onFlip }: FlashcardProps) {
+  const flipAnimation = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    Animated.spring(flipAnimation, {
+      toValue: isRevealed ? 180 : 0,
+      friction: 8,
+      tension: 10,
+      useNativeDriver: true,
+    }).start();
+  }, [isRevealed]);
+
+  const frontInterpolate = flipAnimation.interpolate({
+    inputRange: [0, 180],
+    outputRange: ['0deg', '180deg'],
+  });
+
+  const backInterpolate = flipAnimation.interpolate({
+    inputRange: [0, 180],
+    outputRange: ['180deg', '360deg'],
+  });
+
+  const frontOpacity = flipAnimation.interpolate({
+    inputRange: [0, 89, 90, 180],
+    outputRange: [1, 1, 0, 0],
+  });
+
+  const backOpacity = flipAnimation.interpolate({
+    inputRange: [0, 89, 90, 180],
+    outputRange: [0, 0, 1, 1],
+  });
+
   return (
     <View style={styles.container}>
       <Pressable onPress={onFlip} style={styles.cardContainer}>
         {/* Front Side (Question/Hint) */}
-        <View style={[styles.card, !isRevealed ? styles.visible : styles.hidden]}>
-          <Text style={styles.text}>{memo.note || memo.translatedText || "(No Hint)"}</Text>
-          <Text style={styles.subText}>Tap to reveal answer</Text>
-        </View>
+        <Animated.View
+          style={[
+            styles.card,
+            {
+              transform: [{ perspective: 1000 }, { rotateY: frontInterpolate }],
+              opacity: frontOpacity,
+            },
+          ]}
+        >
+          <Text style={styles.text}>{memo.note || memo.translatedText || "(ヒントなし)"}</Text>
+          <Text style={styles.subText}>タップして答えを表示</Text>
+        </Animated.View>
 
         {/* Back Side (Answer/Word) */}
-        <View style={[styles.card, styles.cardBack, isRevealed ? styles.visible : styles.hidden]}>
-          <Text style={styles.text}>{memo.originalText}</Text>
+        <Animated.View
+          style={[
+            styles.card,
+            styles.cardBack,
+            {
+              transform: [{ perspective: 1000 }, { rotateY: backInterpolate }],
+              opacity: backOpacity,
+            },
+          ]}
+        >
+          <Text style={[styles.text, styles.textBack]}>{memo.originalText}</Text>
           {memo.evaluationText && (
-              <Text style={styles.subText}>({memo.evaluationText})</Text>
+            <Text style={[styles.subText, styles.subTextBack]}>({memo.evaluationText})</Text>
           )}
-        </View>
+        </Animated.View>
       </Pressable>
     </View>
   );
@@ -52,34 +100,35 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     padding: 20,
-    borderWidth: 1,
+    borderWidth: 2,
     borderColor: Colors.border,
     backfaceVisibility: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 4,
   },
   cardBack: {
-    backgroundColor: Colors.card,
-  },
-  visible: {
-    opacity: 1,
-    zIndex: 1,
-  },
-  hidden: {
-    opacity: 0,
-    zIndex: 0,
+    backgroundColor: Colors.primary,
+    borderColor: Colors.primary,
   },
   text: {
     color: Colors.foreground,
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
     textAlign: 'center',
   },
+  textBack: {
+    color: Colors.primaryForeground,
+  },
   subText: {
     color: Colors.mutedForeground,
-    marginTop: 10,
+    marginTop: 12,
+    fontSize: 14,
   },
-  category: {
-    marginTop: 20,
-    color: Colors.primary,
-    fontWeight: '600',
+  subTextBack: {
+    color: 'rgba(255, 255, 255, 0.8)',
   },
 });
+
