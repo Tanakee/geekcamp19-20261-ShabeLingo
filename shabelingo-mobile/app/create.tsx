@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, TextInput, StyleSheet, Image, ScrollView, SafeAreaView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, TextInput, StyleSheet, Image, ScrollView, SafeAreaView, TouchableOpacity, Alert, Modal } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { Camera, Mic, Square, Trash2 } from 'lucide-react-native';
+import { Camera, Mic, Square, Trash2, Image as ImageIcon } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Colors, Layout } from '../constants/Colors';
 import { Button } from '../components/ui/Button';
@@ -61,6 +61,7 @@ export default function CreateMemoScreen() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
   const [imageUri, setImageUri] = useState<string | undefined>(undefined);
+  const [showImageSourceModal, setShowImageSourceModal] = useState(false);
   const [language, setLanguage] = useState<SupportedLanguage>('en-US');
   
   // Audio State (expo-audio)
@@ -92,7 +93,33 @@ export default function CreateMemoScreen() {
     return () => unsubscribe();
   }, [user]);
 
+  const handleImageSourceSelect = () => {
+    setShowImageSourceModal(true);
+  };
+
+  const handleTakePhoto = async () => {
+    setShowImageSourceModal(false);
+    
+    const { status } = await ImagePicker.requestCameraPermissionsAsync();
+    if (status !== 'granted') {
+      Alert.alert('権限が必要です', 'カメラを使用するには権限が必要です。');
+      return;
+    }
+
+    const result = await ImagePicker.launchCameraAsync({
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.3,
+    });
+
+    if (!result.canceled) {
+      setImageUri(result.assets[0].uri);
+    }
+  };
+
   const handlePickImage = async () => {
+    setShowImageSourceModal(false);
+    
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
@@ -243,7 +270,7 @@ export default function CreateMemoScreen() {
             {/* Image Picker */}
             <View style={styles.mediaCol}>
                 <Text style={styles.label}>画像</Text>
-                <TouchableOpacity onPress={handlePickImage} style={styles.imagePlaceholder}>
+                <TouchableOpacity onPress={handleImageSourceSelect} style={styles.imagePlaceholder}>
                     {imageUri ? (
                         <Image source={{ uri: imageUri }} style={styles.imagePreview} />
                     ) : (
@@ -260,6 +287,38 @@ export default function CreateMemoScreen() {
                     />
                 )}
             </View>
+
+            {/* Image Source Selection Modal */}
+            <Modal
+                visible={showImageSourceModal}
+                transparent
+                animationType="fade"
+                onRequestClose={() => setShowImageSourceModal(false)}
+            >
+                <TouchableOpacity 
+                    style={styles.modalOverlay} 
+                    activeOpacity={1} 
+                    onPress={() => setShowImageSourceModal(false)}
+                >
+                    <View style={styles.actionSheet}>
+                        <Text style={styles.actionSheetTitle}>画像を追加</Text>
+                        <TouchableOpacity style={styles.actionSheetButton} onPress={handleTakePhoto}>
+                            <Camera size={24} color={Colors.foreground} />
+                            <Text style={styles.actionSheetButtonText}>カメラで撮影</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={styles.actionSheetButton} onPress={handlePickImage}>
+                            <ImageIcon size={24} color={Colors.foreground} />
+                            <Text style={styles.actionSheetButtonText}>ライブラリから選択</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity 
+                            style={[styles.actionSheetButton, styles.actionSheetCancel]} 
+                            onPress={() => setShowImageSourceModal(false)}
+                        >
+                            <Text style={[styles.actionSheetButtonText, styles.actionSheetCancelText]}>キャンセル</Text>
+                        </TouchableOpacity>
+                    </View>
+                </TouchableOpacity>
+            </Modal>
 
             {/* Audio Recorder */}
             <View style={styles.mediaCol}>
@@ -428,5 +487,48 @@ const styles = StyleSheet.create({
   langFlag: {
     fontSize: 18,
     marginRight: 4,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  actionSheet: {
+    backgroundColor: Colors.background,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    paddingBottom: 40,
+    gap: 12,
+  },
+  actionSheetTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: Colors.foreground,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  actionSheetButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    backgroundColor: Colors.card,
+    borderRadius: 12,
+    gap: 12,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  actionSheetButtonText: {
+    fontSize: 16,
+    color: Colors.foreground,
+    fontWeight: '500',
+  },
+  actionSheetCancel: {
+    marginTop: 8,
+    backgroundColor: Colors.muted,
+  },
+  actionSheetCancelText: {
+    textAlign: 'center',
+    flex: 1,
   },
 });

@@ -6,23 +6,25 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { MemoProvider } from '../context/MemoContext';
 import { AuthProvider } from '../context/AuthContext';
 
+import { Colors } from '../constants/Colors';
+
 export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <AuthProvider>
         <MemoProvider>
-          <StatusBar style="light" />
+          <StatusBar style="dark" />
           <Stack
             screenOptions={{
               headerStyle: {
-                backgroundColor: '#0a0a0f', // Global bg color
+                backgroundColor: Colors.background,
               },
-              headerTintColor: '#fff',
+              headerTintColor: Colors.foreground,
               headerTitleStyle: {
                 fontWeight: 'bold',
               },
               contentStyle: {
-                backgroundColor: '#0a0a0f',
+                backgroundColor: Colors.background,
               },
             }}
           >
