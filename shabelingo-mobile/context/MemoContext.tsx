@@ -48,25 +48,34 @@ export const MemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (!user) return;
 
     let finalImageUrl = memoData.imageUrl;
+    let finalAudioUrl = memoData.audioUrl;
 
     try {
+      const { uploadImage } = await import('../lib/storage');
+      
+      // Upload Image
       if (memoData.imageUrl && !memoData.imageUrl.startsWith('http')) {
-        const { uploadImage } = await import('../lib/storage');
         const filename = `${Date.now()}_img.jpg`;
         const path = `users/${user.uid}/memos/${filename}`;
         finalImageUrl = await uploadImage(memoData.imageUrl, path);
       }
+
+      // Upload Audio
+      if (memoData.audioUrl && !memoData.audioUrl.startsWith('http')) {
+        // 拡張子は録音設定によるが、一旦.m4aとする (Expoデフォルト)
+        const filename = `${Date.now()}_audio.m4a`;
+        const path = `users/${user.uid}/memos/${filename}`;
+        finalAudioUrl = await uploadImage(memoData.audioUrl, path);
+      }
+
     } catch (e) {
-      console.error('Image upload failed, saving without image url', e);
-      // アップロード失敗時はローカルURIのまま保存するか、nullにするか？一旦保持しておく（オフライン対応等のため）
-      // しかし他のデバイスで見られないので、ここではエラーログを出してそのまま進む（またはエラーをスローしてユーザーに通知すべき）
-      // 今回は簡易的にそのまま進む
+      console.error('File upload failed, saving without url', e);
     }
 
     await firestoreAddMemo(user.uid, {
       originalText: memoData.text,
       categoryIds: [memoData.category],
-      audioUrl: memoData.audioUrl,
+      audioUrl: finalAudioUrl,
       imageUrl: finalImageUrl,
       note: memoData.transcription,
     });

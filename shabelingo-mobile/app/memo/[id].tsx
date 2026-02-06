@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Image, ScrollView, SafeAreaView, ActivityIndicator } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { Play } from 'lucide-react-native';
+import { Play, Square } from 'lucide-react-native';
+import { Audio } from 'expo-av';
 import { Colors, Layout } from '../../constants/Colors';
 import { Button } from '../../components/ui/Button';
 import { useMemoContext } from '../../context/MemoContext';
@@ -16,6 +17,10 @@ export default function MemoDetailScreen() {
   const { memos } = useMemoContext();
   const [memo, setMemo] = useState<Memo | undefined>(undefined);
   const [categories, setCategories] = useState<Record<string, Category>>({});
+  
+  // Audio State
+  const [sound, setSound] = useState<Audio.Sound | undefined>();
+  const [isPlaying, setIsPlaying] = useState(false);
 
   useEffect(() => {
     if (memos.length > 0 && id) {
@@ -33,9 +38,60 @@ export default function MemoDetailScreen() {
     return () => unsubscribe();
   }, [user]);
 
+  // Clean up sound on unmount or when memo changes
+  useEffect(() => {
+    return () => {
+      if (sound) {
+        sound.unloadAsync();
+      }
+    };
+  }, [sound]);
+
   const getCategoryName = (idOrName: string) => {
     const cat = categories[idOrName];
     return cat ? cat.name : idOrName;
+  };
+
+  const playSound = async () => {
+    if (!memo?.audioUrl) return;
+
+    try {
+        if (sound) {
+            if (isPlaying) {
+                await sound.pauseAsync();
+                setIsPlaying(false);
+            } else {
+                await sound.playAsync();
+                setIsPlaying(true);
+            }
+            return;
+        }
+
+        // Configure audio session
+        await Audio.setAudioModeAsync({ playsInSilentModeIOS: true });
+        
+        console.log('Loading Sound', memo.audioUrl.substring(0, 50) + '...');
+        // Base64 Data URI is supported by createAsync
+        const { sound: newSound } = await Audio.Sound.createAsync(
+            { uri: memo.audioUrl },
+            { shouldPlay: true }
+        );
+        
+        newSound.setOnPlaybackStatusUpdate((status) => {
+            if (status.isLoaded) {
+                 if (status.didJustFinish) {
+                    setIsPlaying(false);
+                    newSound.setPositionAsync(0);
+                }
+            }
+        });
+        
+        setSound(newSound);
+        setIsPlaying(true);
+    } catch (error) {
+        console.error('Failed to play sound', error);
+        alert('Could not play audio');
+    }
   };
 
   if (!memo) {
@@ -77,14 +133,14 @@ export default function MemoDetailScreen() {
             />
         )}
 
-        {/* Audio Player Placeholder */}
+        {/* Audio Player */}
         {memo.audioUrl && (
             <View style={styles.audioContainer}>
                 <Button 
-                    variant="secondary"
-                    icon={<Play size={20} color="#000" />}
-                    title="Play Audio"
-                    onPress={() => console.log('Play audio TODO')}
+                    variant={isPlaying ? "destructive" : "secondary"}
+                    icon={isPlaying ? <Square size={20} color="#fff" /> : <Play size={20} color="#000" />}
+                    title={isPlaying ? "Pause Audio" : "Play Audio"}
+                    onPress={playSound}
                     style={styles.audioButton}
                 />
             </View>
