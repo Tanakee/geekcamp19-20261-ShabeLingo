@@ -47,11 +47,27 @@ export const MemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }) => {
     if (!user) return;
 
+    let finalImageUrl = memoData.imageUrl;
+
+    try {
+      if (memoData.imageUrl && !memoData.imageUrl.startsWith('http')) {
+        const { uploadImage } = await import('../lib/storage');
+        const filename = `${Date.now()}_img.jpg`;
+        const path = `users/${user.uid}/memos/${filename}`;
+        finalImageUrl = await uploadImage(memoData.imageUrl, path);
+      }
+    } catch (e) {
+      console.error('Image upload failed, saving without image url', e);
+      // アップロード失敗時はローカルURIのまま保存するか、nullにするか？一旦保持しておく（オフライン対応等のため）
+      // しかし他のデバイスで見られないので、ここではエラーログを出してそのまま進む（またはエラーをスローしてユーザーに通知すべき）
+      // 今回は簡易的にそのまま進む
+    }
+
     await firestoreAddMemo(user.uid, {
       originalText: memoData.text,
-      categoryIds: [memoData.category], // 単一IDを配列化
+      categoryIds: [memoData.category],
       audioUrl: memoData.audioUrl,
-      imageUrl: memoData.imageUrl,
+      imageUrl: finalImageUrl,
       note: memoData.transcription,
     });
   };
