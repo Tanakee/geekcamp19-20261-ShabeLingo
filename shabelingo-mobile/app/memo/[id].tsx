@@ -9,7 +9,7 @@ import { useMemoContext } from '../../context/MemoContext';
 import { useAuth } from '../../context/AuthContext';
 import { subscribeCategories } from '../../lib/firestore';
 import { Category, Memo, LANGUAGES } from '../../types';
-import { useAudioPlayer, useAudioPlayerStatus } from 'expo-audio';
+import { useAudioPlayer, useAudioPlayerStatus, setAudioModeAsync } from 'expo-audio';
 
 export default function MemoDetailScreen() {
   const { id } = useLocalSearchParams();
@@ -23,6 +23,14 @@ export default function MemoDetailScreen() {
   const player = useAudioPlayer(memo?.audioUrl || null);
   const playerStatus = useAudioPlayerStatus(player);
   
+  useEffect(() => {
+    // Set audio mode to playback only (allows output to speaker)
+    setAudioModeAsync({
+      allowsRecording: false,
+      playsInSilentMode: true,
+    }).catch((err) => console.log('Audio mode set failed', err));
+  }, []);
+
   useEffect(() => {
     if (memos.length > 0 && id) {
       const found = memos.find(m => m.id === id);
@@ -157,14 +165,31 @@ export default function MemoDetailScreen() {
 
         {/* Audio Player */}
         {memo.audioUrl && (
-            <View style={styles.audioContainer}>
-                <Button 
-                    variant={playerStatus.playing ? "destructive" : "secondary"}
-                    icon={playerStatus.playing ? <Square size={20} color="#fff" /> : <Play size={20} color="#000" />}
-                    title={playerStatus.playing ? "一時停止" : "再生"}
+            <View style={styles.audioPlayerCard}>
+                <TouchableOpacity 
+                    style={[styles.playButton, playerStatus.playing && styles.playingButton]} 
                     onPress={playSound}
-                    style={styles.audioButton}
-                />
+                    activeOpacity={0.8}
+                >
+                    {playerStatus.playing ? (
+                        <Square size={20} color="#fff" fill="#fff" />
+                    ) : (
+                        <Play size={24} color="#fff" fill="#fff" style={{ marginLeft: 2 }} />
+                    )}
+                </TouchableOpacity>
+                <View style={styles.audioInfo}>
+                    <View style={styles.waveform}>
+                        {[12, 20, 16, 24, 18, 14, 22, 16, 12, 18].map((h, i) => (
+                            <View key={i} style={[
+                                styles.waveformBar, 
+                                { height: h, opacity: playerStatus.playing ? 1 : 0.4 }
+                            ]} />
+                        ))}
+                    </View>
+                    <Text style={styles.audioStatusText}>
+                        {playerStatus.playing && "再生中..."}
+                    </Text>
+                </View>
             </View>
         )}
 
@@ -201,10 +226,12 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   badge: {
-    backgroundColor: 'rgba(157, 78, 221, 0.2)',
+    backgroundColor: 'rgba(88, 204, 2, 0.15)',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(88, 204, 2, 0.3)',
   },
   badgeText: {
     color: Colors.primary,
@@ -227,13 +254,58 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     backgroundColor: '#eee',
   },
-  audioContainer: {
+  audioPlayerCard: {
     flexDirection: 'row',
-  },
-  audioButton: {
+    alignItems: 'center',
     backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 16,
     borderWidth: 1,
     borderColor: '#e5e5e5',
+    gap: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  playButton: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: Colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  playingButton: {
+    backgroundColor: Colors.destructive,
+    shadowColor: Colors.destructive,
+  },
+  audioInfo: {
+    flex: 1,
+    justifyContent: 'center',
+    gap: 6,
+  },
+  waveform: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    height: 24,
+  },
+  waveformBar: {
+    width: 4,
+    backgroundColor: Colors.primary,
+    borderRadius: 2,
+  },
+  audioStatusText: {
+    fontSize: 12,
+    color: Colors.mutedForeground,
+    fontWeight: '500',
   },
   noteContainer: {
     backgroundColor: '#f9f9f9',

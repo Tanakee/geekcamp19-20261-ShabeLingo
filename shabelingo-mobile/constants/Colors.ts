@@ -1,31 +1,31 @@
 export const Colors = {
-  background: '#0a0a0f', // Near Black with slight blue tint
-  foreground: '#ffffff',
+  background: '#f7f7f7', // Light warm gray
+  foreground: '#3c3c3c', // Dark gray for text
   
-  card: '#14141a',
-  cardForeground: '#ffffff',
+  card: '#ffffff',
+  cardForeground: '#3c3c3c',
   
-  primary: '#9d4edd', // Vibrant Purple
+  primary: '#58cc02', // Duolingo green
   primaryForeground: '#ffffff',
   
-  secondary: '#00b4d8', // Cyan/Teal Accent
-  secondaryForeground: '#000000',
+  secondary: '#1cb0f6', // Bright blue
+  secondaryForeground: '#ffffff',
   
-  muted: '#33333d',
-  mutedForeground: '#a1a1aa',
+  muted: '#e5e5e5',
+  mutedForeground: '#777777',
   
-  accent: '#ff006e', // Pink/Magenta Accent
+  accent: '#ff9600', // Warm orange
   accentForeground: '#ffffff',
   
-  destructive: '#ef233c',
+  destructive: '#ff4b4b',
   destructiveForeground: '#ffffff',
   
-  border: '#27272a',
-  input: '#27272a',
-  ring: '#9d4edd',
+  border: '#e5e5e5',
+  input: '#ffffff',
+  ring: '#58cc02',
 };
 
 export const Layout = {
-  radius: 16,
+  radius: 20, // More rounded for friendly feel
   padding: 16,
 };

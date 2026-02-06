@@ -12,7 +12,6 @@ interface CardProps {
 export function Card({ children, style, intensity = 20 }: CardProps) {
   return (
     <View style={[styles.container, style]}>
-      <BlurView intensity={intensity} tint="dark" style={StyleSheet.absoluteFill} />
       <View style={styles.content}>
         {children}
       </View>
@@ -24,9 +23,14 @@ const styles = StyleSheet.create({
   container: {
     borderRadius: Layout.radius,
     overflow: 'hidden',
-    backgroundColor: 'rgba(20, 20, 26, 0.6)', // Fallback / Base tint
+    backgroundColor: Colors.card,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
+    borderColor: Colors.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 8,
+    elevation: 2,
   },
   content: {
     padding: Layout.padding,

@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.destructive,
   },
   icon: {
-    backgroundColor: 'rgba(255,255,255,0.1)',
+    backgroundColor: Colors.muted,
   },
   // Sizes
   sm: {

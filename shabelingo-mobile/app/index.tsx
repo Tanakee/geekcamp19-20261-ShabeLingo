@@ -52,13 +52,13 @@ export default function HomeScreen() {
         <View style={styles.headerActions}>
             {/* Filter Button */}
             <TouchableOpacity onPress={() => setShowFilterModal(true)} style={styles.headerBtn}>
-                <Filter size={24} color={activeFiltersCount > 0 ? Colors.primary : "#ffffff"} />
+                <Filter size={24} color={activeFiltersCount > 0 ? Colors.primary : Colors.foreground} />
                 {activeFiltersCount > 0 && <View style={styles.badgeDot} />}
             </TouchableOpacity>
 
             {/* Review Button */}
             <TouchableOpacity onPress={() => router.push('/review')} style={styles.headerBtn}>
-                <Play size={24} color="#ffffff" />
+                <Play size={24} color={Colors.foreground} />
             </TouchableOpacity>
         </View>
       </View>
@@ -233,10 +233,15 @@ const styles = StyleSheet.create({
     height: 44,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#27272a', // Explicitly dark grey
+    backgroundColor: Colors.card,
     borderRadius: 22,
     borderWidth: 1,
-    borderColor: '#3f3f46',
+    borderColor: Colors.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
   },
   listContent: {
     padding: Layout.padding,
@@ -334,12 +339,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   badge: {
-    backgroundColor: 'rgba(157, 78, 221, 0.2)',
+    backgroundColor: 'rgba(88, 204, 2, 0.15)',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'rgba(157, 78, 221, 0.3)',
+    borderColor: 'rgba(88, 204, 2, 0.3)',
   },
   badgeText: {
     color: Colors.primary,
@@ -360,7 +365,7 @@ const styles = StyleSheet.create({
     width: 80,
     height: 80,
     borderRadius: 8,
-    backgroundColor: '#eee',
+    backgroundColor: Colors.muted,
   },
   empty: {
     padding: 32,
@@ -376,7 +381,7 @@ const styles = StyleSheet.create({
     right: 24,
   },
   fab: {
-    shadowColor: '#000',
+    shadowColor: Colors.primary,
     shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.5,
     shadowRadius: 12,
