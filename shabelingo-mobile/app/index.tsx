@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, SafeAreaView } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { Plus, Play } from 'lucide-react-native';
@@ -6,13 +6,35 @@ import { Colors, Layout } from '../constants/Colors';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
 import { useMemoContext } from '../context/MemoContext';
+import { useAuth } from '../context/AuthContext';
+import { subscribeCategories } from '../lib/firestore';
+import { Category } from '../types';
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { memos } = useMemoContext();
+  const { user } = useAuth();
+  const { memos, loading: memoLoading } = useMemoContext();
+  const [categories, setCategories] = useState<Record<string, Category>>({});
+
+  useEffect(() => {
+    if (!user) return;
+    const unsubscribe = subscribeCategories(user.uid, (list) => {
+      const map = list.reduce((acc, cat) => ({ ...acc, [cat.id]: cat }), {});
+      setCategories(map);
+    });
+    return () => unsubscribe();
+  }, [user]);
+
+  const getCategoryName = (ids: string[]) => {
+    if (!ids || ids.length === 0) return 'Uncategorized';
+    const cat = categories[ids[0]];
+    return cat ? cat.name : 'Unknown';
+    // 複数ある場合はカンマ区切りなども可能
+  };
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* ... (Header options) ... */}
       <Stack.Screen 
         options={{
           headerTitle: 'ShabeLingo',
@@ -32,17 +54,29 @@ export default function HomeScreen() {
         data={memos}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContent}
+        refreshing={memoLoading}
+        onRefresh={() => {}} // Firestore subscribeなので明示的なリフレッシュ不要だがUIのため
         renderItem={({ item }) => (
           <Card style={styles.card}>
             <View style={styles.cardHeader}>
-              <View style={styles.badge}>
-                <Text style={styles.badgeText}>{item.category}</Text>
+              <View style={[
+                  styles.badge, 
+                  { borderColor: categories[item.categoryIds?.[0]]?.color || Colors.primary }
+                ]}>
+                <Text style={[
+                  styles.badgeText,
+                  { color: categories[item.categoryIds?.[0]]?.color || Colors.primary }
+                ]}>
+                  {getCategoryName(item.categoryIds)}
+                </Text>
               </View>
               <Text style={styles.date}>
                 {new Date(item.createdAt).toLocaleDateString()}
               </Text>
             </View>
-            <Text style={styles.cardText}>{item.text}</Text>
+            <Text style={styles.cardText} numberOfLines={3}>
+              {item.originalText}
+            </Text>
           </Card>
         )}
         ListEmptyComponent={
@@ -51,7 +85,7 @@ export default function HomeScreen() {
           </View>
         }
       />
-
+      
       <View style={styles.fabContainer}>
         <Button 
           variant="primary" 

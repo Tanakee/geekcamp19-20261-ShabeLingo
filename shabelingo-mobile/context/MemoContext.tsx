@@ -1,33 +1,66 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { Memo, MOCK_MEMOS } from "../lib/mockData";
+import { Memo } from "../types";
+import { subscribeMemos, addMemo as firestoreAddMemo } from "../lib/firestore";
+import { useAuth } from "./AuthContext";
 
 interface MemoContextType {
   memos: Memo[];
-  addMemo: (memo: Omit<Memo, "id" | "createdAt" | "updatedAt">) => void;
+  addMemo: (memoData: {
+    originalText: string;
+    categoryIds: string[];
+    audioUrl?: string;
+    imageUrl?: string;
+    transcription?: string; // noteとして保存するか、transcriptionフィールドを作るか。今回は note にマッピング
+  }) => Promise<void>;
+  loading: boolean;
 }
 
 const MemoContext = createContext<MemoContextType | undefined>(undefined);
 
 export const MemoProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
   const [memos, setMemos] = useState<Memo[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Load initial data
-    setMemos(MOCK_MEMOS);
-  }, []);
+    if (!user) {
+      setMemos([]);
+      setLoading(false);
+      return;
+    }
 
-  const addMemo = (newMemoData: Omit<Memo, "id" | "createdAt" | "updatedAt">) => {
-    const newMemo: Memo = {
-      ...newMemoData,
-      id: Math.random().toString(36).substring(7), // crypto.randomUUID not always avail in bare JS engines without polyfill
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
-    setMemos((prev) => [newMemo, ...prev]);
+    setLoading(true);
+    const unsubscribe = subscribeMemos(user.uid, (data) => {
+      // firestore.ts からは any[] で返ってくるが、中身は Memo に近い
+      // 必要があれば型アーションや変換を行う
+      setMemos(data as Memo[]);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  const addMemo = async (memoData: {
+    originalText: string;
+    categoryIds: string[];
+    audioUrl?: string;
+    imageUrl?: string;
+    transcription?: string;
+  }) => {
+    if (!user) return; // あるいはエラーを投げる
+
+    // create.tsx から渡される transcription を note として扱う、等のマッピング
+    await firestoreAddMemo(user.uid, {
+      originalText: memoData.originalText,
+      categoryIds: memoData.categoryIds,
+      audioUrl: memoData.audioUrl,
+      imageUrl: memoData.imageUrl,
+      note: memoData.transcription, 
+    });
   };
 
   return (
-    <MemoContext.Provider value={{ memos, addMemo }}>
+    <MemoContext.Provider value={{ memos, addMemo, loading }}>
       {children}
     </MemoContext.Provider>
   );

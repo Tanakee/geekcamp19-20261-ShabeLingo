@@ -70,22 +70,26 @@ export default function CreateScreen() {
     }
   }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!text && !audioUri && !imageUri) {
       Alert.alert('Empty Memo', 'Please add some content.');
       return;
     }
     
-    addMemo({
-      text: text || 'Audio Note',
-      category: selectedCategoryIds[0] || 'Uncategorized',
-      audioUrl: audioUri || undefined,
-      imageUrl: imageUri || undefined,
-      transcription: text,
-    });
+    try {
+      await addMemo({
+        originalText: text || 'Audio Note',
+        categoryIds: selectedCategoryIds,
+        audioUrl: audioUri || undefined,
+        imageUrl: imageUri || undefined,
+        transcription: text,
+      });
 
-    Alert.alert('Saved!', 'Your memo has been saved.');
-    router.back();
+      Alert.alert('Saved!', 'Your memo has been saved.');
+      router.back();
+    } catch (error) {
+      Alert.alert('Error', 'Failed to save memo.');
+    }
   };
 
   React.useEffect(() => {

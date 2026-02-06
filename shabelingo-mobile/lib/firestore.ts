@@ -71,3 +71,62 @@ export const deleteCategory = async (categoryId: string) => {
     throw error;
   }
 };
+
+// --- Memo Functions ---
+
+const memosRef = collection(db, 'memos');
+
+export const subscribeMemos = (userId: string, callback: (memos: any[]) => void) => {
+  const q = query(
+    memosRef,
+    where('userId', '==', userId),
+    orderBy('createdAt', 'desc')
+  );
+
+  return onSnapshot(q, (snapshot) => {
+    const memos: any[] = [];
+    snapshot.forEach((doc) => {
+      // id と data を結合。
+      // FirestoreのTimestampはDateに変換するか、数値(Unix Time)にするか要検討
+      // types/index.ts Definition uses number (Unix timestamp)
+      // ここではとりあえず raw data を返し、利用側で整形するか、ヘルパーで変換する
+      // 簡易のため、FirestoreのTimestamp型が含まれる場合は toMillis() などで変換して返す
+      const data = doc.data();
+      memos.push({
+        id: doc.id,
+        ...data,
+        createdAt: data.createdAt?.toMillis ? data.createdAt.toMillis() : data.createdAt,
+        updatedAt: data.updatedAt?.toMillis ? data.updatedAt.toMillis() : data.updatedAt,
+        nextReviewDate: data.nextReviewDate?.toMillis ? data.nextReviewDate.toMillis() : data.nextReviewDate,
+        lastReviewDate: data.lastReviewDate?.toMillis ? data.lastReviewDate.toMillis() : data.lastReviewDate,
+      });
+    });
+    callback(memos);
+  });
+};
+
+export const addMemo = async (userId: string, memoData: {
+  originalText: string;
+  categoryIds: string[];
+  audioUrl?: string;
+  imageUrl?: string;
+  note?: string; 
+}) => {
+  try {
+    await addDoc(memosRef, {
+      userId,
+      ...memoData,
+      status: 'new',
+      reviewCount: 0,
+      easeFactor: 2.5,
+      interval: 0,
+      nextReviewDate: serverTimestamp(), // すぐ復習対象にするか、明日か？ とりあえず現在時刻
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error('Error adding memo:', error);
+    throw error;
+  }
+};
+
