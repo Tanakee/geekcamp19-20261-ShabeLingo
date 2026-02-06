@@ -109,7 +109,7 @@ export default function CreateMemoScreen() {
     try {
       const perm = await requestRecordingPermissionsAsync();
       if (perm.status !== 'granted') {
-          Alert.alert("Permission Required", "Please grant microphone permission to record audio.");
+          Alert.alert("権限が必要です", "録音するにはマイクの使用許可が必要です。");
           return;
       }
       
@@ -122,7 +122,7 @@ export default function CreateMemoScreen() {
       recorder.record();
     } catch (err) {
       console.error('Failed to start recording', err);
-      Alert.alert("Error", "Failed to start recording.");
+      Alert.alert("エラー", "録音の開始に失敗しました。");
     }
   };
 
@@ -139,11 +139,11 @@ export default function CreateMemoScreen() {
 
   const handleSave = async () => {
     if (!text.trim()) {
-      alert('Please enter text');
+      alert('テキストを入力してください');
       return;
     }
     if (!selectedCategoryId) {
-      alert('Please select a category');
+      alert('カテゴリーを選択してください');
       return;
     }
 
@@ -159,7 +159,7 @@ export default function CreateMemoScreen() {
       });
       router.back();
     } catch (e: any) {
-      alert('Failed to save memo: ' + e.message);
+      alert('メモの保存に失敗しました: ' + e.message);
     }
   };
 
@@ -171,19 +171,19 @@ export default function CreateMemoScreen() {
         // CategorySelector will handle selection visually, but we might need to update local state logic if needed
         return newId;
     } catch (e) {
-        Alert.alert("Error", "Failed to add category");
+        Alert.alert("エラー", "カテゴリーの追加に失敗しました");
         throw e;
     }
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      <Stack.Screen options={{ headerTitle: 'New Memo', headerBackTitle: 'Cancel' }} />
+      <Stack.Screen options={{ headerTitle: '新規メモ作成', headerBackTitle: 'キャンセル' }} />
       
       <ScrollView contentContainerStyle={styles.content}>
         {/* Language Selection */}
         <View style={styles.section}>
-          <Text style={styles.label}>Language</Text>
+          <Text style={styles.label}>言語</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8 }}>
             {LANGUAGES.map((lang) => (
               <TouchableOpacity
@@ -206,10 +206,10 @@ export default function CreateMemoScreen() {
 
         {/* Text Input */}
         <View style={styles.section}>
-          <Text style={styles.label}>Word / Phrase</Text>
+          <Text style={styles.label}>学習したい言葉</Text>
           <TextInput
             style={styles.input}
-            placeholder="e.g., Hello"
+            placeholder="例: はろー"
             value={text}
             onChangeText={setText}
             autoFocus
@@ -218,11 +218,11 @@ export default function CreateMemoScreen() {
 
         {/* Evaluation Text Input */}
         <View style={styles.section}>
-          <Text style={styles.label}>Pronunciation Target (Optional)</Text>
-          <Text style={styles.hint}>If Word/Phrase is in Katakana, enter correct spelling here.</Text>
+          <Text style={styles.label}>発音評価用ターゲット (任意)</Text>
+          <Text style={styles.hint}>正しいスペルを入力してください</Text>
           <TextInput
             style={styles.input}
-            placeholder="e.g., Hello"
+            placeholder="例: Hello"
             value={evaluationText}
             onChangeText={setEvaluationText}
           />
@@ -230,7 +230,7 @@ export default function CreateMemoScreen() {
 
         {/* Category */}
         <View style={styles.section}>
-          <Text style={styles.label}>Category</Text>
+          <Text style={styles.label}>カテゴリー</Text>
           <CategorySelector
             selectedCategoryIds={selectedCategoryId ? [selectedCategoryId] : []}
             onSelect={(ids) => setSelectedCategoryId(ids[0] || '')}
@@ -242,7 +242,7 @@ export default function CreateMemoScreen() {
         <View style={styles.rowSection}>
             {/* Image Picker */}
             <View style={styles.mediaCol}>
-                <Text style={styles.label}>Image</Text>
+                <Text style={styles.label}>画像</Text>
                 <TouchableOpacity onPress={handlePickImage} style={styles.imagePlaceholder}>
                     {imageUri ? (
                         <Image source={{ uri: imageUri }} style={styles.imagePreview} />
@@ -254,7 +254,7 @@ export default function CreateMemoScreen() {
                     <Button 
                         variant="ghost" 
                         size="sm" 
-                        title="Remove" 
+                        title="削除" 
                         onPress={() => setImageUri(undefined)}
                         style={{ marginTop: 8 }}
                     />
@@ -263,7 +263,7 @@ export default function CreateMemoScreen() {
 
             {/* Audio Recorder */}
             <View style={styles.mediaCol}>
-                <Text style={styles.label}>Voice Memo</Text>
+                <Text style={styles.label}>音声メモ</Text>
                 <View style={styles.audioControl}>
                     {recorderState.isRecording ? (
                          <TouchableOpacity onPress={stopRecording} style={[styles.recordBtn, styles.recording]}>
@@ -276,13 +276,13 @@ export default function CreateMemoScreen() {
                     )}
                 </View>
                 <Text style={styles.audioLabel}>
-                    {recorderState.isRecording ? "Recording..." : audioUri ? "Recorded!" : "Tap to Record"}
+                    {recorderState.isRecording ? "録音中..." : audioUri ? "録音完了!" : "タップして録音"}
                 </Text>
                  {audioUri && !recorderState.isRecording && (
                     <Button 
                         variant="ghost" 
                         size="sm" 
-                        title="Delete" 
+                        title="削除" 
                         onPress={() => setAudioUri(undefined)}
                         style={{ marginTop: 8 }}
                     />
@@ -292,10 +292,10 @@ export default function CreateMemoScreen() {
 
         {/* Notes */}
         <View style={styles.section}>
-          <Text style={styles.label}>Notes / Meaning</Text>
+          <Text style={styles.label}>意味・メモ</Text>
           <TextInput
             style={[styles.input, styles.textArea]}
-            placeholder="Translation, notes, etc."
+            placeholder="翻訳やメモなど"
             value={transcription}
             onChangeText={setTranscription}
             multiline
@@ -306,7 +306,7 @@ export default function CreateMemoScreen() {
         <Button
           variant="primary"
           size="lg"
-          title={loading ? "Saving..." : "Save Memo"}
+          title={loading ? "保存中..." : "保存"}
           onPress={handleSave}
           disabled={loading}
           style={styles.saveBtn}
