@@ -23,7 +23,7 @@ export default function HomeScreen() {
 
   // Filtering Logic
   const filteredMemos = memos.filter(m => {
-    const langMatch = filterLang === 'all' || m.language === filterLang || (!m.language && filterLang === 'all');
+    const langMatch = filterLang === 'all' ? true : m.language === filterLang;
     const catMatch = filterCat === 'all' || (m.categoryIds && m.categoryIds.includes(filterCat));
     return langMatch && catMatch;
   });

@@ -75,19 +75,19 @@ export default function MemoDetailScreen() {
     if (!memo) return;
     
     Alert.alert(
-      "Delete Memo",
-      "Are you sure you want to delete this memo?",
+      "メモを削除",
+      "本当にこのメモを削除しますか？",
       [
-        { text: "Cancel", style: "cancel" },
+        { text: "キャンセル", style: "cancel" },
         { 
-          text: "Delete", 
+          text: "削除", 
           style: "destructive",
           onPress: async () => {
             try {
               await deleteMemo(memo.id);
               router.back();
             } catch (error) {
-              Alert.alert("Error", "Failed to delete memo");
+              Alert.alert("エラー", "メモの削除に失敗しました");
             }
           }
         }
@@ -110,10 +110,13 @@ export default function MemoDetailScreen() {
     <SafeAreaView style={styles.container}>
       <Stack.Screen 
         options={{ 
-          headerTitle: 'Memo Detail', 
-          headerBackTitle: 'Back',
+          headerTitle: 'メモ詳細', 
+          headerBackTitle: '戻る',
           headerRight: () => (
-            <TouchableOpacity onPress={handleDelete}>
+            <TouchableOpacity 
+              onPress={handleDelete} 
+              style={{ width: 44, height: 44, justifyContent: 'center', alignItems: 'center', marginTop: -4 }}
+            >
               <Trash2 size={24} color={Colors.destructive} />
             </TouchableOpacity>
           )
@@ -126,7 +129,7 @@ export default function MemoDetailScreen() {
             <View style={{ gap: 8, flexDirection: 'row', flexWrap: 'wrap' }}>
                 <View style={styles.badge}>
                     <Text style={styles.badgeText}>
-                        {getCategoryName(memo.categoryIds && memo.categoryIds.length > 0 ? memo.categoryIds[0] : 'Uncategorized')}
+                        {getCategoryName(memo.categoryIds && memo.categoryIds.length > 0 ? memo.categoryIds[0] : '未分類')}
                     </Text>
                 </View>
                 <View style={[styles.badge, { backgroundColor: '#f0f0f0' }]}>
@@ -158,7 +161,7 @@ export default function MemoDetailScreen() {
                 <Button 
                     variant={playerStatus.playing ? "destructive" : "secondary"}
                     icon={playerStatus.playing ? <Square size={20} color="#fff" /> : <Play size={20} color="#000" />}
-                    title={playerStatus.playing ? "Pause Audio" : "Play Audio"}
+                    title={playerStatus.playing ? "一時停止" : "再生"}
                     onPress={playSound}
                     style={styles.audioButton}
                 />
@@ -168,7 +171,7 @@ export default function MemoDetailScreen() {
         {/* Notes / Transcription */}
         {memo.note && (
             <View style={styles.noteContainer}>
-                <Text style={styles.noteLabel}>Note / Transcription</Text>
+                <Text style={styles.noteLabel}>メモ・翻訳</Text>
                 <Text style={styles.noteText}>{memo.note}</Text>
             </View>
         )}
@@ -245,7 +248,7 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   noteText: {
-    color: Colors.foreground,
+    color: '#000',
     fontSize: 16,
     lineHeight: 24,
   },

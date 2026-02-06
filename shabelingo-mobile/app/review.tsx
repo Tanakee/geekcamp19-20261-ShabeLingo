@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, Alert, Platform } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { ChevronLeft, RefreshCw, Check, Mic, Square } from 'lucide-react-native';
@@ -50,6 +50,12 @@ const AZURE_RECORDING_OPTIONS = {
 export default function ReviewScreen() {
   const router = useRouter();
   const { memos } = useMemoContext();
+  
+  // Filter memos to only include those with evaluationText
+  const reviewMemos = useMemo(() => {
+    return memos.filter(m => m.evaluationText && m.evaluationText.trim().length > 0);
+  }, [memos]);
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isRevealed, setIsRevealed] = useState(false);
   const [sessionState, setSessionState] = useState<'reading' | 'result'>('reading');
@@ -62,7 +68,7 @@ export default function ReviewScreen() {
   });
   const recorderState = useAudioRecorderState(recorder);
   
-  const currentMemo = memos[currentIndex];
+  const currentMemo = reviewMemos[currentIndex];
 
   useEffect(() => {
     // Determine audio mode for recording
@@ -76,7 +82,7 @@ export default function ReviewScreen() {
   }, []);
 
   const handleNext = () => {
-    if (currentIndex < memos.length - 1) {
+    if (currentIndex < reviewMemos.length - 1) {
       setCurrentIndex(prev => prev + 1);
       setIsRevealed(false);
       setSessionState('reading');
@@ -141,7 +147,22 @@ export default function ReviewScreen() {
     }
   };
 
-  if (!currentMemo) return <View />;
+  if (!currentMemo) {
+    return (
+        <SafeAreaView style={styles.container}>
+            <Stack.Screen options={{ headerShown: false }} />
+            <View style={styles.header}>
+                <Button variant="ghost" size="icon" icon={<ChevronLeft size={24} color="#fff" />} onPress={() => router.back()} />
+            </View>
+            <View style={[styles.main, { justifyContent: 'center', alignItems: 'center' }]}>
+                <Text style={{ color: Colors.mutedForeground, textAlign: 'center' }}>
+                    No memos with pronunciation targets found. {'\n'}
+                    Please add a memo with a target (evaluation text) to start reviewing.
+                </Text>
+            </View>
+        </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -150,7 +171,7 @@ export default function ReviewScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Button variant="ghost" size="icon" icon={<ChevronLeft size={24} color="#fff" />} onPress={() => router.back()} />
-        <Text style={styles.progress}>{currentIndex + 1} / {memos.length}</Text>
+        <Text style={styles.progress}>{currentIndex + 1} / {reviewMemos.length}</Text>
         <View style={{ width: 48 }} />
       </View>
 
