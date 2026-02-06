@@ -43,16 +43,14 @@ export const subscribeCategories = (userId: string, callback: (categories: Categ
  */
 export const addCategory = async (userId: string, name: string, color?: string) => {
   try {
-    // 同じ名前のカテゴリーがないかチェック（オプション）
-    // 今回は簡易実装のため重複チェックは省略またはUI側で行う
-
-    await addDoc(categoriesRef, {
+    const docRef = await addDoc(categoriesRef, {
       userId,
       name,
       color: color || '#9d4edd', // Default color
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
     });
+    return docRef.id;
   } catch (error) {
     console.error('Error adding category:', error);
     throw error;
