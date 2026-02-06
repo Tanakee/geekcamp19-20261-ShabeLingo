@@ -1,37 +1,38 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, Stack } from 'expo-router';
-import { FontAwesome } from '@expo/vector-icons'; // Use FontAwesome for standard brand logos
+import { FontAwesome, MaterialIcons } from '@expo/vector-icons'; // Use vector icons
 import { Colors, Layout } from '../constants/Colors';
 import { Button } from '../components/ui/Button';
+import { useAuth } from '../context/AuthContext';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const [loading, setLoading] = useState<'google' | 'apple' | null>(null);
+  const { signInAsGuest } = useAuth();
+  const [loading, setLoading] = useState<'google' | 'apple' | 'guest' | null>(null);
 
   const handleGoogleLogin = async () => {
-    setLoading('google');
-    console.log('Google Login Pressed');
-    
-    // TODO: Implement actual login logic in Issue #15
-    setTimeout(() => {
-      setLoading(null);
-      // 仮の遷移
-      router.replace('/');
-    }, 1500);
+    // TODO: Implement Google Sign-In for Expo
+    // Requires expo-auth-session and Google Cloud configuration
+    Alert.alert("Coming Soon", "Google Sign-In will be implemented shortly.");
   };
 
   const handleAppleLogin = async () => {
-    setLoading('apple');
-    console.log('Apple Login Pressed');
+    // TODO: Implement Apple Sign-In
+    Alert.alert("Coming Soon", "Apple Sign-In will be implemented shortly.");
+  };
 
-    // TODO: Implement actual login logic in Issue #15
-    setTimeout(() => {
+  const handleGuestLogin = async () => {
+    setLoading('guest');
+    try {
+      await signInAsGuest();
+      // AuthContext will handle redirection to '/' automatically upon user state change
+    } catch (error) {
+      console.error(error);
+      Alert.alert("Error", "Failed to sign in as guest.");
       setLoading(null);
-      // 仮の遷移
-      router.replace('/');
-    }, 1500);
+    }
   };
 
   return (
@@ -64,6 +65,18 @@ export default function LoginScreen() {
             style={styles.appleButton}
             icon={<FontAwesome name="apple" size={22} color="#ffffff" />}
             title="Continue with Apple"
+          />
+          
+          <View style={styles.divider}>
+             <Text style={styles.dividerText}>OR</Text>
+          </View>
+
+          <Button
+            onPress={handleGuestLogin}
+            loading={loading === 'guest'}
+            variant="secondary"
+            icon={<MaterialIcons name="person-outline" size={22} color="#000" />}
+            title="Continue as Guest"
           />
           
           <Text style={styles.termsText}>
@@ -122,6 +135,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#000000',
     borderWidth: 1,
     borderColor: '#333333',
+  },
+  divider: {
+    alignItems: 'center',
+    marginVertical: 4,
+  },
+  dividerText: {
+    color: Colors.mutedForeground,
+    fontSize: 12,
+    fontWeight: '600',
   },
   termsText: {
     marginTop: 16,
