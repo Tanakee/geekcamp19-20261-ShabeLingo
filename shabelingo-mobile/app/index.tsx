@@ -56,13 +56,17 @@ export default function HomeScreen() {
           <Card style={styles.card}>
             <View style={styles.cardHeader}>
               <View style={styles.badge}>
-                <Text style={styles.badgeText}>{getCategoryName(item.category)}</Text>
+                {/* categoryIds配列の0番目を表示 */}
+                <Text style={styles.badgeText}>
+                  {getCategoryName(item.categoryIds && item.categoryIds.length > 0 ? item.categoryIds[0] : 'Uncategorized')}
+                </Text>
               </View>
               <Text style={styles.date}>
                 {new Date(item.createdAt).toLocaleDateString()}
               </Text>
             </View>
-            <Text style={styles.cardText}>{item.text}</Text>
+            {/* text ではなく originalText を表示 */}
+            <Text style={styles.cardText}>{item.originalText}</Text>
           </Card>
         )}
         ListEmptyComponent={

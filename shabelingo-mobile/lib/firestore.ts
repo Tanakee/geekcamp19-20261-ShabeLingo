@@ -69,3 +69,58 @@ export const deleteCategory = async (categoryId: string) => {
     throw error;
   }
 };
+
+
+// --- Memo Functions ---
+
+const memosRef = collection(db, 'memos');
+
+export const subscribeMemos = (userId: string, callback: (memos: any[]) => void) => {
+  const q = query(
+    memosRef,
+    where('userId', '==', userId),
+    orderBy('createdAt', 'desc')
+  );
+
+  return onSnapshot(q, (snapshot) => {
+    const memos = snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        id: doc.id,
+        ...data,
+        // Timestamp to number conversion for UI usage
+        createdAt: data.createdAt?.toMillis() || Date.now(),
+        updatedAt: data.updatedAt?.toMillis() || Date.now(),
+        nextReviewDate: data.nextReviewDate?.toMillis ? data.nextReviewDate.toMillis() : (data.nextReviewDate || Date.now()),
+      };
+    });
+    callback(memos);
+  });
+};
+
+export const addMemo = async (userId: string, data: {
+  originalText: string;
+  categoryIds: string[];
+  audioUrl?: string;
+  imageUrl?: string;
+  note?: string;
+}) => {
+  try {
+    await addDoc(memosRef, {
+      userId,
+      ...data,
+      // SRS Defaults
+      status: 'new',
+      reviewCount: 0,
+      easeFactor: 2.5,
+      interval: 0,
+      nextReviewDate: serverTimestamp(), // Initially review immediately/now
+      
+      createdAt: serverTimestamp(),
+      updatedAt: serverTimestamp(),
+    });
+  } catch (error) {
+    console.error('Error adding memo:', error);
+    throw error;
+  }
+};
