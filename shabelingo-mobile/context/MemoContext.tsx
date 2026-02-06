@@ -1,33 +1,63 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { Memo, MOCK_MEMOS } from "../lib/mockData";
+import { Memo } from "../types";
+import { useAuth } from "./AuthContext";
+import { subscribeMemos, addMemo as firestoreAddMemo } from "../lib/firestore";
 
 interface MemoContextType {
   memos: Memo[];
-  addMemo: (memo: Omit<Memo, "id" | "createdAt" | "updatedAt">) => void;
+  addMemo: (memoData: {
+    text: string;
+    category: string;
+    audioUrl?: string;
+    imageUrl?: string;
+    transcription?: string;
+  }) => Promise<void>;
+  loading: boolean;
 }
 
 const MemoContext = createContext<MemoContextType | undefined>(undefined);
 
 export const MemoProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
   const [memos, setMemos] = useState<Memo[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Load initial data
-    setMemos(MOCK_MEMOS);
-  }, []);
+    if (!user) {
+      setMemos([]);
+      setLoading(false);
+      return;
+    }
 
-  const addMemo = (newMemoData: Omit<Memo, "id" | "createdAt" | "updatedAt">) => {
-    const newMemo: Memo = {
-      ...newMemoData,
-      id: Math.random().toString(36).substring(7), // crypto.randomUUID not always avail in bare JS engines without polyfill
-      createdAt: Date.now(),
-      updatedAt: Date.now(),
-    };
-    setMemos((prev) => [newMemo, ...prev]);
+    setLoading(true);
+    const unsubscribe = subscribeMemos(user.uid, (data) => {
+      setMemos(data as Memo[]);
+      setLoading(false);
+    });
+
+    return () => unsubscribe();
+  }, [user]);
+
+  const addMemo = async (memoData: {
+    text: string;
+    category: string;
+    audioUrl?: string;
+    imageUrl?: string;
+    transcription?: string;
+  }) => {
+    if (!user) return;
+
+    await firestoreAddMemo(user.uid, {
+      originalText: memoData.text,
+      categoryIds: [memoData.category], // 単一IDを配列化
+      audioUrl: memoData.audioUrl,
+      imageUrl: memoData.imageUrl,
+      note: memoData.transcription,
+    });
   };
 
   return (
-    <MemoContext.Provider value={{ memos, addMemo }}>
+    <MemoContext.Provider value={{ memos, addMemo, loading }}>
       {children}
     </MemoContext.Provider>
   );
