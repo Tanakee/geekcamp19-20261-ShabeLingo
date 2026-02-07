@@ -73,12 +73,12 @@ export function CategorySelector({ selectedCategoryIds, onSelect, multiSelect = 
 
   const handleDelete = (category: Category) => {
     Alert.alert(
-      'Delete Category',
-      `Delete "${category.name}"?`,
+      'カテゴリーを削除',
+      `「${category.name}」を削除しますか?`,
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: 'キャンセル', style: 'cancel' },
         { 
-          text: 'Delete', 
+          text: '削除', 
           style: 'destructive',
           onPress: async () => {
             try {
@@ -88,7 +88,7 @@ export function CategorySelector({ selectedCategoryIds, onSelect, multiSelect = 
                 onSelect(selectedCategoryIds.filter(id => id !== category.id));
               }
             } catch (e) {
-              Alert.alert('Error', 'Failed to delete');
+              Alert.alert('エラー', '削除に失敗しました');
             }
           }
         }
