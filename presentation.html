@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+  <title>喋Lingo (ShabeLingo) | からあゲーム</title>
+
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reset.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/theme/dracula.min.css">
+
+  <!-- Custom Theme Overrides -->
+  <style>
+    .reveal {
+      font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+    }
+    .reveal h1, .reveal h2, .reveal h3 {
+      font-weight: bold;
+      text-transform: none; /* Keep capitalization natural */
+      font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+    }
+    .reveal section img {
+      background: none;
+      border: none;
+      box-shadow: none;
+    }
+    .accent {
+      color: #ff79c6; /* Dracula pink */
+    }
+    .highlight {
+      color: #8be9fd; /* Dracula cyan */
+    }
+    .subtext {
+      font-size: 0.6em;
+      opacity: 0.8;
+    }
+    .video-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 60vh;
+      background: #282a36;
+      border: 2px dashed #6272a4;
+      border-radius: 10px;
+    }
+    .card {
+        background: rgba(255, 255, 255, 0.1);
+        padding: 20px;
+        border-radius: 10px;
+        margin: 10px;
+        text-align: left;
+    }
+    .flex-container {
+        display: flex;
+        justify-content: space-around;
+        flex-wrap: wrap;
+    }
+    .flex-item {
+        flex: 1;
+        min-width: 300px;
+    }
+  </style>
+</head>
+<body>
+  <div class="reveal">
+    <div class="slides">
+
+      <!-- Slide 1: Title -->
+      <section>
+        <h4>チーム：からあゲーム</h4>
+        <h1>喋Lingo <span class="subtext">(ShabeLingo)</span></h1>
+        <p class="highlight">瞬時に記録し、効率的に復習する<br>多機能メモアプリ</p>
+      </section>
+
+      <!-- Slide 2: Why (Trigger) -->
+      <section>
+        <h3>なんで作ったか <span class="accent">（きっかけ）</span></h3>
+        <div class="flex-container">
+            <div class="flex-item card fragment">
+                <h3>😩 既存の不満</h3>
+                <ul>
+                    <li>いいフレーズに出会っても、記録が面倒で忘れてしまう</li>
+                    <li>音声・画像・文字がバラバラに保存される</li>
+                    <li>後で見返しても発音が思い出せない</li>
+                </ul>
+            </div>
+            <div class="flex-item card fragment">
+                <h3>💡 解決策</h3>
+                <ul>
+                    <li><strong class="highlight">「1秒でも早く記録する」</strong>体験</li>
+                    <li>音声・画像・文字を<strong class="highlight">「一括管理」</strong></li>
+                    <li>隙間時間で効率的に復習</li>
+                </ul>
+            </div>
+        </div>
+      </section>
+
+      <!-- Slide 3: Implementation Focus -->
+      <section>
+        <h3>今回こだわった実装 <span class="accent">（技術＆UX）</span></h3>
+        <ul>
+            <li class="fragment">
+                <strong>爆速起動・多モーダル入力</strong>
+                <br><span class="subtext">React Native (Expo) でカメラ・マイクへの高速アクセス</span>
+            </li>
+            <li class="fragment">
+                <strong>正確な発音評価</strong>
+                <br><span class="subtext">Azure Pronunciation Assessment (Microsoft) を活用し、音素単位でフィードバック</span>
+            </li>
+             <li class="fragment">
+                <strong>モダンなUI/UX</strong>
+                <br><span class="subtext">直感的で美しいカード型UI、スムーズなアニメーション</span>
+            </li>
+            <li class="fragment">
+                <strong>堅牢なバックエンド</strong>
+                <br><span class="subtext">Firebase (Firestore) によるリアルタイム同期とスケーラビリティ</span>
+            </li>
+        </ul>
+      </section>
+
+      <!-- Slide 4: Demo -->
+      <section>
+        <h3>実際の動作 <span class="accent">（デモ）</span></h3>
+        <div class="video-container">
+            <!-- 
+              *** TODO: Replace 'demo.mp4' with your actual video file *** 
+              Ensure the video file is in the same directory as this HTML file.
+            -->
+            <video data-autoplay controls width="80%" height="80%">
+                <source src="demo.mp4" type="video/mp4">
+                動画ファイルを 'demo.mp4' として保存してください。<br>
+                Please save your demo video as 'demo.mp4'.
+            </video>
+        </div>
+        <p class="subtext">※ 音声・画像・文字をスムーズに記録する様子をご覧ください</p>
+      </section>
+
+      <!-- Slide 5: Future Prospects -->
+      <section>
+        <h3>今後の展望 <span class="accent">（技育博・リリースへ）</span></h3>
+        <ul>
+            <li class="fragment"> <strong>発音評価機能の本格実装</strong>
+                <br><small>Azure API連携による高精度判定・フィードバックUI</small>
+            </li>
+            <li class="fragment"> <strong>SRS (間隔反復) 復習システム</strong>
+                <br><small>忘却曲線に基づいたロジック・セッション管理の実装</small>
+            </li>
+            <li class="fragment"> <strong>フラッシュカード学習UI</strong>
+                <br><small>直感的で効率的な学習コンポーネントの実装</small>
+            </li>
+        </ul>
+      </section>
+
+      <!-- Slide 6: Summary/End -->
+      <section>
+        <h3>ご清聴ありがとうございました</h3>
+        <h3 class="highlight">喋Lingo (ShabeLingo)</h3>
+        <p>チーム：からあゲーム</p>
+      </section>
+
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.5.0/reveal.min.js"></script>
+  <script>
+    Reveal.initialize({
+      hash: true,
+      controls: true,
+      progress: true,
+      center: true,
+      transition: 'slide' // none/fade/slide/convex/concave/zoom
+    });
+  </script>
+</body>
+</html>
+
+<!-- 
+【URLの発行方法 (GitHub Pagesを利用する場合)】
+
+1. GitHubリポジトリを作成し、このフォルダのファイルをアップロードします。
+   - `presentation.html` を `index.html` にリネームすると、URLがシンプルになります。
+     (例: https://username.github.io/repo-name/)
+
+2. リポジトリの「Settings」タブを開きます。
+
+3. 左側のメニューから「Pages」をクリックします。
+
+4. 「Source」セクションの「Branch」を「main」(またはmaster) に設定し、「Save」ボタンを押します。
+
+5. 数分待つと、同ページの上部に公開URLが表示されます。
+   (例: https://username.github.io/repo-name/presentation.html)
+
+6. そのURLを共有すれば、誰でもプレゼンテーションを閲覧できます。
+-->
+
+<!--
+【URLの発行方法 (Netlify Dropを利用する場合)】
+※ アカウント作成不要で、フォルダをドラッグ＆ドロップするだけで一時的なURLを発行できます。
+
+1. https://app.netlify.com/drop にアクセスします。
+
+2. このフォルダ (`geekcamp19-20261-ShabeLang`) を、ブラウザの「Drag and drop your site folder here」の枠内にドラッグ＆ドロップします。
+
+3. 即座にURLが発行されます。(例: https://random-name-12345.netlify.app)
+   - `presentation.html` を `index.html` にリネームしておくと、発行されたURLにアクセスするだけで表示されます。
+   - リネームしていない場合は、URLの末尾に `/presentation.html` を付けてアクセスしてください。
+
+4. そのURLを共有します。
+-->
