@@ -120,10 +120,8 @@ export default function CreateMemoScreen() {
   };
 
   const handlePickImage = async () => {
-    setShowImageSourceModal(false);
-    
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [4, 3],
       quality: 0.3, 
@@ -306,10 +304,31 @@ export default function CreateMemoScreen() {
         {/* Evaluation Text Input */}
         <View style={styles.section}>
           <Text style={styles.label}>発音評価用ターゲット (任意)</Text>
-          <Text style={styles.hint}>正しいスペルを入力してください</Text>
+          <Text style={styles.hint}>
+            {language.startsWith('zh-') 
+              ? 'ピンイン（拼音）で入力してください（例: ni hao）' 
+              : language === 'ja-JP'
+              ? 'ローマ字で入力してください（例: konnichiwa）'
+              : language === 'ko-KR'
+              ? 'ローマ字で入力してください（例: annyeonghaseyo）'
+              : language === 'ar-SA'
+              ? 'ローマ字転写で入力してください（例: marhaba）'
+              : language === 'hi-IN'
+              ? 'ローマ字転写で入力してください（例: namaste）'
+              : language === 'th-TH'
+              ? 'ローマ字転写で入力してください（例: sawasdee）'
+              : language === 'ru-RU'
+              ? 'ローマ字転写で入力してください（例: privet）'
+              : '正しいスペルを入力してください（例: Hello）'}
+          </Text>
           <TextInput
             style={styles.input}
-            placeholder="例: Hello"
+            placeholder={
+              language.startsWith('zh-') ? '例: ni hao' 
+              : language === 'ja-JP' ? '例: konnichiwa'
+              : language === 'ko-KR' ? '例: annyeonghaseyo'
+              : '例: Hello'
+            }
             value={evaluationText}
             onChangeText={setEvaluationText}
           />
@@ -330,7 +349,7 @@ export default function CreateMemoScreen() {
             {/* Image Picker */}
             <View style={styles.mediaCol}>
                 <Text style={styles.label}>画像</Text>
-                <TouchableOpacity onPress={handleImageSourceSelect} style={styles.imagePlaceholder}>
+                <TouchableOpacity onPress={handlePickImage} style={styles.imagePlaceholder}>
                     {imageUri ? (
                         <Image source={{ uri: imageUri }} style={styles.imagePreview} />
                     ) : (
