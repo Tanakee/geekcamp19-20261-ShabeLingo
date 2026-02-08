@@ -96,18 +96,41 @@ export default function CreateMemoScreen() {
   }, [user]);
 
   const handleImageSourceSelect = () => {
-    setShowImageSourceModal(true);
+    console.log('Opening image source modal...');
+    
+    // Use native action sheet instead of custom modal
+    Alert.alert(
+      '画像を追加',
+      '画像の取得方法を選択してください',
+      [
+        {
+          text: 'カメラで撮影',
+          onPress: handleTakePhoto,
+        },
+        {
+          text: 'ライブラリから選択',
+          onPress: handlePickImage,
+        },
+        {
+          text: 'キャンセル',
+          style: 'cancel',
+        },
+      ],
+      { cancelable: true }
+    );
   };
 
   const handleTakePhoto = async () => {
-    setShowImageSourceModal(false);
+    console.log('handleTakePhoto called');
     
+    console.log('Requesting camera permissions...');
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('権限が必要です', 'カメラを使用するには権限が必要です。');
       return;
     }
 
+    console.log('Launching camera...');
     const result = await ImagePicker.launchCameraAsync({
       allowsEditing: true,
       aspect: [4, 3],
@@ -115,11 +138,15 @@ export default function CreateMemoScreen() {
     });
 
     if (!result.canceled) {
+      console.log('Image captured:', result.assets[0].uri);
       setImageUri(result.assets[0].uri);
     }
   };
 
   const handlePickImage = async () => {
+    console.log('handlePickImage called');
+    
+    console.log('Launching image library...');
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: true,
@@ -128,6 +155,7 @@ export default function CreateMemoScreen() {
     });
 
     if (!result.canceled) {
+      console.log('Image selected:', result.assets[0].uri);
       setImageUri(result.assets[0].uri);
     }
   };
@@ -349,7 +377,7 @@ export default function CreateMemoScreen() {
             {/* Image Picker */}
             <View style={styles.mediaCol}>
                 <Text style={styles.label}>画像</Text>
-                <TouchableOpacity onPress={handlePickImage} style={styles.imagePlaceholder}>
+                <TouchableOpacity onPress={handleImageSourceSelect} style={styles.imagePlaceholder}>
                     {imageUri ? (
                         <Image source={{ uri: imageUri }} style={styles.imagePreview} />
                     ) : (
@@ -374,11 +402,12 @@ export default function CreateMemoScreen() {
                 animationType="fade"
                 onRequestClose={() => setShowImageSourceModal(false)}
             >
-                <TouchableOpacity 
-                    style={styles.modalOverlay} 
-                    activeOpacity={1} 
-                    onPress={() => setShowImageSourceModal(false)}
-                >
+                <View style={styles.modalOverlay}>
+                    <TouchableOpacity 
+                        style={StyleSheet.absoluteFill}
+                        activeOpacity={1} 
+                        onPress={() => setShowImageSourceModal(false)}
+                    />
                     <View style={styles.actionSheet}>
                         <Text style={styles.actionSheetTitle}>画像を追加</Text>
                         <TouchableOpacity style={styles.actionSheetButton} onPress={handleTakePhoto}>
@@ -396,7 +425,7 @@ export default function CreateMemoScreen() {
                             <Text style={[styles.actionSheetButtonText, styles.actionSheetCancelText]}>キャンセル</Text>
                         </TouchableOpacity>
                     </View>
-                </TouchableOpacity>
+                </View>
             </Modal>
 
             {/* Audio Recorder */}
