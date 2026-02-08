@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, Image, ScrollView, SafeAreaView, ActivityIndicator, Alert, TouchableOpacity } from 'react-native';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
-import { Play, Square, Trash2 } from 'lucide-react-native';
+import { Play, Square, Trash2, Edit } from 'lucide-react-native';
 // import { Audio } from 'expo-av';
 import { Colors, Layout } from '../../constants/Colors';
 import { Button } from '../../components/ui/Button';
@@ -121,12 +121,23 @@ export default function MemoDetailScreen() {
           headerTitle: 'メモ詳細', 
           headerBackTitle: '戻る',
           headerRight: () => (
-            <TouchableOpacity 
-              onPress={handleDelete} 
-              style={{ width: 44, height: 44, justifyContent: 'center', alignItems: 'center', marginTop: -4 }}
-            >
-              <Trash2 size={24} color={Colors.destructive} />
-            </TouchableOpacity>
+            <View style={{ flexDirection: 'row', gap: 12 }}>
+              <TouchableOpacity 
+                onPress={() => router.push({
+                  pathname: '/create',
+                  params: { editMemoId: id }
+                })}
+                style={{ width: 44, height: 44, justifyContent: 'center', alignItems: 'center', marginTop: -4 }}
+              >
+                <Edit size={24} color={Colors.foreground} />
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={handleDelete} 
+                style={{ width: 44, height: 44, justifyContent: 'center', alignItems: 'center', marginTop: -4 }}
+              >
+                <Trash2 size={24} color={Colors.destructive} />
+              </TouchableOpacity>
+            </View>
           )
         }} 
       />
@@ -135,14 +146,14 @@ export default function MemoDetailScreen() {
         {/* Header Info */}
         <View style={styles.header}>
             <View style={{ gap: 8, flexDirection: 'row', flexWrap: 'wrap' }}>
-                <View style={styles.badge}>
-                    <Text style={styles.badgeText}>
-                        {getCategoryName(memo.categoryIds && memo.categoryIds.length > 0 ? memo.categoryIds[0] : '未分類')}
-                    </Text>
-                </View>
                 <View style={[styles.badge, { backgroundColor: '#f0f0f0' }]}>
                     <Text style={styles.badgeText}>
                          {getLanguageInfo(memo.language).flag} {getLanguageInfo(memo.language).label}
+                    </Text>
+                </View>
+                <View style={styles.badge}>
+                    <Text style={styles.badgeText}>
+                        {getCategoryName(memo.categoryIds && memo.categoryIds.length > 0 ? memo.categoryIds[0] : '未分類')}
                     </Text>
                 </View>
             </View>

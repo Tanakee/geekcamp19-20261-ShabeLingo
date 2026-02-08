@@ -6,6 +6,7 @@ import { Colors, Layout } from '../constants/Colors';
 import { Button } from '../components/ui/Button';
 import { Flashcard } from '../components/review/Flashcard';
 import { useMemoContext } from '../context/MemoContext';
+import { LANGUAGES } from '../types';
 import { assessPronunciation } from '../lib/azure';
 import { 
   useAudioRecorder, 
@@ -171,7 +172,19 @@ export default function ReviewScreen() {
       {/* Header */}
       <View style={styles.header}>
         <Button variant="ghost" size="icon" icon={<ChevronLeft size={24} color="#fff" />} onPress={() => router.back()} />
-        <Text style={styles.progress}>{currentIndex + 1} / {reviewMemos.length}</Text>
+        <View style={{ alignItems: 'center', gap: 4 }}>
+          <Text style={styles.progress}>{currentIndex + 1} / {reviewMemos.length}</Text>
+          {currentMemo.language && (
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Text style={{ fontSize: 16 }}>
+                {LANGUAGES.find(l => l.code === currentMemo.language)?.flag}
+              </Text>
+              <Text style={{ color: Colors.mutedForeground, fontSize: 12 }}>
+                {LANGUAGES.find(l => l.code === currentMemo.language)?.label}
+              </Text>
+            </View>
+          )}
+        </View>
         <View style={{ width: 48 }} />
       </View>
 

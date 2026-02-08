@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, TextInput, StyleSheet, Image, ScrollView, SafeAreaView, TouchableOpacity, Alert, Modal } from 'react-native';
-import { Stack, useRouter } from 'expo-router';
+import { Stack, useRouter, useLocalSearchParams } from 'expo-router';
 import { Camera, Mic, Square, Trash2, Image as ImageIcon } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { Colors, Layout } from '../constants/Colors';
@@ -9,7 +9,7 @@ import { CategorySelector } from '../components/ui/CategorySelector';
 import { useMemoContext } from '../context/MemoContext';
 import { useAuth } from '../context/AuthContext';
 import { subscribeCategories, addCategory } from '../lib/firestore';
-import { Category, LANGUAGES, SupportedLanguage } from '../types';
+import { Category, LANGUAGES, SupportedLanguage, Memo } from '../types';
 import { 
   useAudioRecorder, 
   useAudioRecorderState, 
@@ -52,8 +52,9 @@ const MEMO_RECORDING_OPTIONS = {
 
 export default function CreateMemoScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ audioUri?: string; editMemoId?: string }>();
   const { user } = useAuth();
-  const { addMemo, loading } = useMemoContext();
+  const { memos, addMemo, loading } = useMemoContext();
   
   const [text, setText] = useState('');
   const [evaluationText, setEvaluationText] = useState('');
@@ -64,10 +65,14 @@ export default function CreateMemoScreen() {
   const [showImageSourceModal, setShowImageSourceModal] = useState(false);
   const [showLanguageModal, setShowLanguageModal] = useState(false);
   const [languageSearch, setLanguageSearch] = useState('');
-  const [language, setLanguage] = useState<SupportedLanguage>('en-US');
+  const [language, setLanguage] = useState<SupportedLanguage | undefined>(undefined);
   
   // Audio State (expo-audio)
-  const [audioUri, setAudioUri] = useState<string | undefined>(undefined);
+  const [audioUri, setAudioUri] = useState<string | undefined>(params.audioUri);
+  
+  // Edit mode
+  const isEditMode = !!params.editMemoId;
+  const [editingMemo, setEditingMemo] = useState<Memo | undefined>(undefined);
   
   const recorder = useAudioRecorder(MEMO_RECORDING_OPTIONS, (status) => {
     // console.log('Memo Recorder Status:', status);
@@ -86,28 +91,64 @@ export default function CreateMemoScreen() {
     if (!user) return;
     const unsubscribe = subscribeCategories(user.uid, (data) => {
       setCategories(data);
-      // Auto-select first category if none selected
-      if (!selectedCategoryId && data.length > 0) {
-        setSelectedCategoryId(data[0].id);
-      }
     });
 
     return () => unsubscribe();
   }, [user]);
 
+  // Load existing memo in edit mode
+  useEffect(() => {
+    if (isEditMode && params.editMemoId && memos.length > 0) {
+      const memo = memos.find(m => m.id === params.editMemoId);
+      if (memo) {
+        setEditingMemo(memo);
+        setText(memo.originalText || '');
+        setEvaluationText(memo.evaluationText || '');
+        setTranscription(memo.note || '');
+        setSelectedCategoryId(memo.categoryIds && memo.categoryIds.length > 0 ? memo.categoryIds[0] : '');
+        setLanguage(memo.language || 'en-US');
+        setImageUri(memo.imageUrl);
+        setAudioUri(memo.audioUrl);
+      }
+    }
+  }, [isEditMode, params.editMemoId, memos]);
+
   const handleImageSourceSelect = () => {
-    setShowImageSourceModal(true);
+    console.log('Opening image source modal...');
+    
+    // Use native action sheet instead of custom modal
+    Alert.alert(
+      '画像を追加',
+      '画像の取得方法を選択してください',
+      [
+        {
+          text: 'カメラで撮影',
+          onPress: handleTakePhoto,
+        },
+        {
+          text: 'ライブラリから選択',
+          onPress: handlePickImage,
+        },
+        {
+          text: 'キャンセル',
+          style: 'cancel',
+        },
+      ],
+      { cancelable: true }
+    );
   };
 
   const handleTakePhoto = async () => {
-    setShowImageSourceModal(false);
+    console.log('handleTakePhoto called');
     
+    console.log('Requesting camera permissions...');
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
       Alert.alert('権限が必要です', 'カメラを使用するには権限が必要です。');
       return;
     }
 
+    console.log('Launching camera...');
     const result = await ImagePicker.launchCameraAsync({
       allowsEditing: true,
       aspect: [4, 3],
@@ -115,11 +156,15 @@ export default function CreateMemoScreen() {
     });
 
     if (!result.canceled) {
+      console.log('Image captured:', result.assets[0].uri);
       setImageUri(result.assets[0].uri);
     }
   };
 
   const handlePickImage = async () => {
+    console.log('handlePickImage called');
+    
+    console.log('Launching image library...');
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
       allowsEditing: true,
@@ -128,6 +173,7 @@ export default function CreateMemoScreen() {
     });
 
     if (!result.canceled) {
+      console.log('Image selected:', result.assets[0].uri);
       setImageUri(result.assets[0].uri);
     }
   };
@@ -169,21 +215,32 @@ export default function CreateMemoScreen() {
       alert('テキストを入力してください');
       return;
     }
-    if (!selectedCategoryId) {
-      alert('カテゴリーを選択してください');
-      return;
-    }
 
     try {
-      await addMemo({
-        text,
-        evaluationText,
-        category: selectedCategoryId,
-        imageUrl: imageUri,
-        audioUrl: audioUri,
-        transcription: transcription,
-        language: language,
-      });
+      if (isEditMode && params.editMemoId) {
+        // Update existing memo
+        const { updateMemo } = await import('../lib/firestore');
+        await updateMemo(params.editMemoId, {
+          originalText: text,
+          evaluationText,
+          categoryIds: selectedCategoryId ? [selectedCategoryId] : [],
+          imageUrl: imageUri,
+          audioUrl: audioUri,
+          note: transcription,
+          language: language,
+        });
+      } else {
+        // Create new memo
+        await addMemo({
+          text,
+          evaluationText,
+          category: selectedCategoryId || '',
+          imageUrl: imageUri,
+          audioUrl: audioUri,
+          transcription: transcription,
+          language: language,
+        });
+      }
       router.back();
     } catch (e: any) {
       alert('メモの保存に失敗しました: ' + e.message);
@@ -208,6 +265,18 @@ export default function CreateMemoScreen() {
       <Stack.Screen options={{ headerTitle: '新規メモ作成', headerBackTitle: 'キャンセル' }} />
       
       <ScrollView contentContainerStyle={styles.content}>
+        {/* Text Input */}
+        <View style={styles.section}>
+          <Text style={styles.label}>学習したい言葉</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="例: はろー"
+            value={text}
+            onChangeText={setText}
+            autoFocus
+          />
+        </View>
+
         {/* Language Selection */}
         <View style={styles.section}>
           <Text style={styles.label}>言語</Text>
@@ -216,15 +285,70 @@ export default function CreateMemoScreen() {
             onPress={() => setShowLanguageModal(true)}
           >
             <View style={styles.languageSelectorContent}>
-              <Text style={styles.langFlag}>
-                {LANGUAGES.find(l => l.code === language)?.flag}
-              </Text>
-              <Text style={styles.languageSelectorText}>
-                {LANGUAGES.find(l => l.code === language)?.label}
-              </Text>
+              {language ? (
+                <>
+                  <Text style={styles.langFlag}>
+                    {LANGUAGES.find(l => l.code === language)?.flag}
+                  </Text>
+                  <Text style={styles.languageSelectorText}>
+                    {LANGUAGES.find(l => l.code === language)?.label}
+                  </Text>
+                </>
+              ) : (
+                <Text style={[styles.languageSelectorText, { color: Colors.mutedForeground }]}>
+                  言語を選択
+                </Text>
+              )}
             </View>
             <Text style={styles.languageSelectorArrow}>▼</Text>
           </TouchableOpacity>
+        </View>
+
+        {/* Category */}
+        <View style={styles.section}>
+          <Text style={styles.label}>カテゴリー</Text>
+          <CategorySelector
+            selectedCategoryIds={selectedCategoryId && selectedCategoryId !== '' ? [selectedCategoryId] : []}
+            onSelect={(ids) => setSelectedCategoryId(ids[0] || '')}
+            multiSelect={false}
+          />
+        </View>
+
+        {/* Evaluation Text Input */}
+        <View style={styles.section}>
+          <Text style={styles.label}>発音評価用ターゲット (任意)</Text>
+          <Text style={styles.hint}>
+            {language?.startsWith('zh-') 
+              ? 'ピンイン(拼音)で入力してください(例: ni hao)' 
+              : language === 'ja-JP'
+              ? 'ローマ字で入力してください(例: konnichiwa)'
+              : language === 'ko-KR'
+              ? 'ハングル文字で入力してください(例: 안녕하세요)'
+              : language === 'ar-SA'
+              ? 'アラビア文字で入力してください(例: مرحبا)'
+              : language === 'hi-IN'
+              ? 'デーヴァナーガリー文字で入力してください(例: नमस्ते)'
+              : language === 'th-TH'
+              ? 'タイ文字で入力してください(例: สวัสดี)'
+              : language === 'ru-RU'
+              ? 'キリル文字で入力してください(例: привет)'
+              : '正しいスペルを入力してください(例: Hello)'}
+          </Text>
+          <TextInput
+            style={styles.input}
+            placeholder={
+              language?.startsWith('zh-') ? '例: ni hao' 
+              : language === 'ja-JP' ? '例: konnichiwa'
+              : language === 'ko-KR' ? '例: 안녕하세요'
+              : language === 'ar-SA' ? '例: مرحبا'
+              : language === 'hi-IN' ? '例: नमस्ते'
+              : language === 'th-TH' ? '例: สวัสดี'
+              : language === 'ru-RU' ? '例: привет'
+              : '例: Hello'
+            }
+            value={evaluationText}
+            onChangeText={setEvaluationText}
+          />
         </View>
 
         {/* Language Selection Modal */}
@@ -289,67 +413,12 @@ export default function CreateMemoScreen() {
           </SafeAreaView>
         </Modal>
 
-        {/* Text Input */}
-        <View style={styles.section}>
-          <Text style={styles.label}>学習したい言葉</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="例: はろー"
-            value={text}
-            onChangeText={setText}
-            autoFocus
-          />
-        </View>
-
-        {/* Evaluation Text Input */}
-        <View style={styles.section}>
-          <Text style={styles.label}>発音評価用ターゲット (任意)</Text>
-          <Text style={styles.hint}>
-            {language.startsWith('zh-') 
-              ? 'ピンイン（拼音）で入力してください（例: ni hao）' 
-              : language === 'ja-JP'
-              ? 'ローマ字で入力してください（例: konnichiwa）'
-              : language === 'ko-KR'
-              ? 'ローマ字で入力してください（例: annyeonghaseyo）'
-              : language === 'ar-SA'
-              ? 'ローマ字転写で入力してください（例: marhaba）'
-              : language === 'hi-IN'
-              ? 'ローマ字転写で入力してください（例: namaste）'
-              : language === 'th-TH'
-              ? 'ローマ字転写で入力してください（例: sawasdee）'
-              : language === 'ru-RU'
-              ? 'ローマ字転写で入力してください（例: privet）'
-              : '正しいスペルを入力してください（例: Hello）'}
-          </Text>
-          <TextInput
-            style={styles.input}
-            placeholder={
-              language.startsWith('zh-') ? '例: ni hao' 
-              : language === 'ja-JP' ? '例: konnichiwa'
-              : language === 'ko-KR' ? '例: annyeonghaseyo'
-              : '例: Hello'
-            }
-            value={evaluationText}
-            onChangeText={setEvaluationText}
-          />
-        </View>
-
-        {/* Category */}
-        <View style={styles.section}>
-          <Text style={styles.label}>カテゴリー</Text>
-          <CategorySelector
-            selectedCategoryIds={selectedCategoryId ? [selectedCategoryId] : []}
-            onSelect={(ids) => setSelectedCategoryId(ids[0] || '')}
-            multiSelect={false}
-          />
-        </View>
-
         {/* Media (Image & Audio) */}
         <View style={styles.rowSection}>
             {/* Image Picker */}
             <View style={styles.mediaCol}>
                 <Text style={styles.label}>画像</Text>
-                <TouchableOpacity onPress={handlePickImage} style={styles.imagePlaceholder}>
+                <TouchableOpacity onPress={handleImageSourceSelect} style={styles.imagePlaceholder}>
                     {imageUri ? (
                         <Image source={{ uri: imageUri }} style={styles.imagePreview} />
                     ) : (
@@ -374,11 +443,12 @@ export default function CreateMemoScreen() {
                 animationType="fade"
                 onRequestClose={() => setShowImageSourceModal(false)}
             >
-                <TouchableOpacity 
-                    style={styles.modalOverlay} 
-                    activeOpacity={1} 
-                    onPress={() => setShowImageSourceModal(false)}
-                >
+                <View style={styles.modalOverlay}>
+                    <TouchableOpacity 
+                        style={StyleSheet.absoluteFill}
+                        activeOpacity={1} 
+                        onPress={() => setShowImageSourceModal(false)}
+                    />
                     <View style={styles.actionSheet}>
                         <Text style={styles.actionSheetTitle}>画像を追加</Text>
                         <TouchableOpacity style={styles.actionSheetButton} onPress={handleTakePhoto}>
@@ -396,7 +466,7 @@ export default function CreateMemoScreen() {
                             <Text style={[styles.actionSheetButtonText, styles.actionSheetCancelText]}>キャンセル</Text>
                         </TouchableOpacity>
                     </View>
-                </TouchableOpacity>
+                </View>
             </Modal>
 
             {/* Audio Recorder */}

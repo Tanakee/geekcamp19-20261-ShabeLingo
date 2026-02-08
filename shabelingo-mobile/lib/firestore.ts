@@ -1,6 +1,7 @@
 import { 
   collection, 
-  addDoc, 
+  addDoc,
+  updateDoc,
   deleteDoc, 
   doc, 
   onSnapshot, 
@@ -108,24 +109,66 @@ export const addMemo = async (userId: string, data: {
   evaluationText?: string;
 }) => {
   try {
-    await addDoc(memosRef, {
+    // Remove undefined fields
+    const cleanData: any = {
       userId,
-      ...data,
+      originalText: data.originalText,
+      categoryIds: data.categoryIds,
       // SRS Defaults
       status: 'new',
       reviewCount: 0,
       easeFactor: 2.5,
       interval: 0,
-      nextReviewDate: serverTimestamp(), // Initially review immediately/now
-      
+      nextReviewDate: serverTimestamp(),
       createdAt: serverTimestamp(),
       updatedAt: serverTimestamp(),
-    });
+    };
+
+    // Only add optional fields if they are defined
+    if (data.audioUrl !== undefined) cleanData.audioUrl = data.audioUrl;
+    if (data.imageUrl !== undefined) cleanData.imageUrl = data.imageUrl;
+    if (data.note !== undefined) cleanData.note = data.note;
+    if (data.language !== undefined) cleanData.language = data.language;
+    if (data.evaluationText !== undefined) cleanData.evaluationText = data.evaluationText;
+
+    await addDoc(memosRef, cleanData);
   } catch (error) {
     console.error('Error adding memo:', error);
     throw error;
   }
 };
+
+export const updateMemo = async (memoId: string, data: {
+  originalText?: string;
+  categoryIds?: string[];
+  audioUrl?: string;
+  imageUrl?: string;
+  note?: string;
+  language?: SupportedLanguage;
+  evaluationText?: string;
+}) => {
+  try {
+    const cleanData: any = {
+      updatedAt: serverTimestamp(),
+    };
+
+    // Only add fields that are defined
+    if (data.originalText !== undefined) cleanData.originalText = data.originalText;
+    if (data.categoryIds !== undefined) cleanData.categoryIds = data.categoryIds;
+    if (data.audioUrl !== undefined) cleanData.audioUrl = data.audioUrl;
+    if (data.imageUrl !== undefined) cleanData.imageUrl = data.imageUrl;
+    if (data.note !== undefined) cleanData.note = data.note;
+    if (data.language !== undefined) cleanData.language = data.language;
+    if (data.evaluationText !== undefined) cleanData.evaluationText = data.evaluationText;
+
+    const memoRef = doc(db, 'memos', memoId);
+    await updateDoc(memoRef, cleanData);
+  } catch (error) {
+    console.error('Error updating memo:', error);
+    throw error;
+  }
+};
+
 
 export const deleteMemo = async (memoId: string) => {
   try {
