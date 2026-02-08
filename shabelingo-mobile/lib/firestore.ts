@@ -107,6 +107,7 @@ export const addMemo = async (userId: string, data: {
   note?: string;
   language?: SupportedLanguage;
   evaluationText?: string;
+  meaning?: string;
 }) => {
   try {
     // Remove undefined fields
@@ -130,6 +131,7 @@ export const addMemo = async (userId: string, data: {
     if (data.note !== undefined) cleanData.note = data.note;
     if (data.language !== undefined) cleanData.language = data.language;
     if (data.evaluationText !== undefined) cleanData.evaluationText = data.evaluationText;
+    if (data.meaning !== undefined) cleanData.meaning = data.meaning;
 
     await addDoc(memosRef, cleanData);
   } catch (error) {

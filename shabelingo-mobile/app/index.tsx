@@ -8,6 +8,8 @@ import { Card } from '../components/ui/Card';
 import { useMemoContext } from '../context/MemoContext';
 import { useAuth } from '../context/AuthContext';
 import { subscribeCategories } from '../lib/firestore';
+import { recognizeSpeech } from '../lib/azure';
+import { translateText, getRomanization } from '../lib/translator';
 import { Category, LANGUAGES, SupportedLanguage } from '../types';
 import { 
   useAudioRecorder, 
@@ -63,6 +65,10 @@ export default function HomeScreen() {
   const [filterLang, setFilterLang] = useState<SupportedLanguage | 'all'>('all');
   const [filterCat, setFilterCat] = useState<string | 'all'>('all');
 
+  // Recording language selection
+  const [recordingLanguage, setRecordingLanguage] = useState<SupportedLanguage>('ja-JP');
+  const [showLanguageModal, setShowLanguageModal] = useState(false);
+
   // Audio Recording
   const recorder = useAudioRecorder(RECORDING_OPTIONS);
   const recorderState = useAudioRecorderState(recorder);
@@ -74,6 +80,10 @@ export default function HomeScreen() {
       playsInSilentMode: true,
     });
   }, []);
+
+  useEffect(() => {
+    console.log('Language modal state:', showLanguageModal);
+  }, [showLanguageModal]);
 
   // Pulse animation when recording
   useEffect(() => {
@@ -151,12 +161,74 @@ export default function HomeScreen() {
         return;
       }
 
-      // Create memo with audio only (no category or language pre-selected)
+      // Perform speech recognition
+      let romanizedText = '音声メモ'; // Romanized text (for learning word)
+      let nativeText = undefined; // Native script (for evaluation)
+      let meaningText = undefined; // Japanese meaning
+      
+      try {
+        const recognized = await recognizeSpeech(uri, recordingLanguage);
+        if (recognized) {
+          // For most languages, the recognized text is already in native script
+          // We'll use it as the native text and translate to get romanization and meaning
+          
+            if (recordingLanguage !== 'ja-JP') {
+              nativeText = recognized;
+              
+              // Determine if language uses Latin script (approximate check)
+              const latinLangs = ['en', 'es', 'fr', 'de', 'it', 'pt', 'vi', 'id', 'tr', 'pl', 'nl', 'sv', 'fil'];
+              const isLatin = latinLangs.some(code => recordingLanguage.startsWith(code));
+
+              if (isLatin) {
+                romanizedText = recognized;
+              } else {
+                // For non-Latin scripts (KO, ZH, JA, RU, AR, TH, HI)
+                // Try to Transliterate
+                try {
+                  const transliterated = await getRomanization(recognized, recordingLanguage);
+                  if (transliterated) {
+                    romanizedText = transliterated;
+                  } else {
+                    romanizedText = '(発音を入力してください)';
+                  }
+                } catch (e) {
+                  console.error('Transliteration call failed:', e);
+                  romanizedText = '(発音を入力してください)';
+                }
+              }
+              
+              // Translate to Japanese for meaning
+              try {
+                const japaneseTranslation = await translateText(recognized, 'ja-JP', recordingLanguage.split('-')[0]);
+                if (japaneseTranslation) {
+                  meaningText = japaneseTranslation;
+                } else {
+                  meaningText = `(翻訳できませんでした: ${recognized})`;
+                }
+              } catch (translationError) {
+                console.error('Translation failed:', translationError);
+                meaningText = `(翻訳エラー: ${recognized})`;
+              }
+            } else {
+              // If recording language is Japanese
+              romanizedText = recognized; // Japanese input is usually native script
+              nativeText = recognized;
+              meaningText = recognized;
+            }
+        }
+      } catch (error) {
+        console.error('Speech recognition or translation failed:', error);
+        // Continue with default text if recognition fails
+      }
+
+      // Create memo
       await addMemo({
-        text: '音声メモ',
+        text: romanizedText, // 学習したい言葉 (Romanized)
         category: '', // No category selected
         audioUrl: uri,
-        // language is undefined, user will select later
+        language: recordingLanguage,
+        evaluationText: nativeText, // 発音評価用ターゲット (Native script)
+        meaning: meaningText, // 意味・メモ (Japanese meaning)
       });
 
       // Switch to list view
@@ -197,6 +269,22 @@ export default function HomeScreen() {
                 : 'マイクをタップして音声を録音'}
             </Text>
 
+            {/* Language Selection */}
+            {!recorderState.isRecording && (
+              <TouchableOpacity 
+                style={styles.languageButton}
+                onPress={() => {
+                  console.log('Language button pressed!');
+                  setShowLanguageModal(true);
+                }}
+              >
+                <Text style={styles.languageButtonText}>
+                  {LANGUAGES.find(l => l.code === recordingLanguage)?.flag} {LANGUAGES.find(l => l.code === recordingLanguage)?.label}
+                </Text>
+                <Text style={styles.languageButtonArrow}>▼</Text>
+              </TouchableOpacity>
+            )}
+
             <TouchableOpacity
               style={styles.micButton}
               onPress={recorderState.isRecording ? handleStopRecording : handleStartRecording}
@@ -233,6 +321,47 @@ export default function HomeScreen() {
             />
           </View>
         </View>
+
+        {/* Language Selection Modal */}
+        <Modal
+          visible={showLanguageModal}
+          animationType="slide"
+          transparent={false}
+          onRequestClose={() => setShowLanguageModal(false)}
+        >
+          <SafeAreaView style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>録音言語を選択</Text>
+              <TouchableOpacity onPress={() => setShowLanguageModal(false)}>
+                <X size={24} color={Colors.foreground} />
+              </TouchableOpacity>
+            </View>
+            
+            <ScrollView style={styles.modalContent}>
+              {LANGUAGES.map((lang) => (
+                <TouchableOpacity
+                  key={lang.code}
+                  style={[
+                    styles.languageOption,
+                    recordingLanguage === lang.code && styles.languageOptionActive
+                  ]}
+                  onPress={() => {
+                    setRecordingLanguage(lang.code);
+                    setShowLanguageModal(false);
+                  }}
+                >
+                  <Text style={styles.languageOptionFlag}>{lang.flag}</Text>
+                  <Text style={[
+                    styles.languageOptionText,
+                    recordingLanguage === lang.code && styles.languageOptionTextActive
+                  ]}>
+                    {lang.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </SafeAreaView>
+        </Modal>
       </SafeAreaView>
     );
   }
@@ -401,6 +530,28 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: Colors.background,
   },
+  modalContainer: {
+    flex: 1,
+    backgroundColor: Colors.background,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: Layout.padding,
+    paddingVertical: 16,
+    backgroundColor: Colors.background,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: Colors.foreground,
+  },
+  modalContent: {
+    padding: Layout.padding,
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -509,26 +660,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: Colors.card,
   },
-  modalContainer: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
-  },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: Colors.foreground,
-  },
-  modalContent: {
-    padding: 24,
-  },
   filterSection: {
     marginBottom: 24,
   },
@@ -636,5 +767,51 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.5,
     shadowRadius: 12,
     elevation: 8,
-  }
+  },
+  languageButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: Colors.card,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    marginTop: 16,
+    marginBottom: 8,
+    width: '80%',
+    alignSelf: 'center',
+    zIndex: 10,
+  },
+  languageButtonText: {
+    color: Colors.foreground,
+    fontSize: 16,
+  },
+  languageButtonArrow: {
+    color: Colors.mutedForeground,
+    fontSize: 12,
+  },
+  languageOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+    gap: 12,
+  },
+  languageOptionActive: {
+    backgroundColor: Colors.muted,
+  },
+  languageOptionFlag: {
+    fontSize: 24,
+  },
+  languageOptionText: {
+    color: Colors.foreground,
+    fontSize: 16,
+  },
+  languageOptionTextActive: {
+    color: Colors.primary,
+    fontWeight: '600',
+  },
 });

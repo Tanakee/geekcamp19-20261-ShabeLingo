@@ -73,7 +73,8 @@ export interface Memo {
   
   // 言語 (New)
   language?: SupportedLanguage;
-  evaluationText?: string; // 発音評価用の正しいスペル (例: original="はろー", evaluation="Hello")
+  evaluationText?: string; // 発音評価用の正しいスペル (例: original="annyeonghaseyo", evaluation="안녕하세요")
+  meaning?: string;        // 日本語の意味 (例: "こんにちは")
 
   // 分類
   categoryIds: string[];   // 複数のカテゴリーに属せるように配列

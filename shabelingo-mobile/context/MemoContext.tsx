@@ -13,6 +13,7 @@ interface MemoContextType {
     transcription?: string;
     language?: SupportedLanguage;
     evaluationText?: string;
+    meaning?: string;
   }) => Promise<void>;
   deleteMemo: (id: string) => Promise<void>;
   loading: boolean;
@@ -49,6 +50,7 @@ export const MemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
     transcription?: string;
     language?: SupportedLanguage;
     evaluationText?: string;
+    meaning?: string;
   }) => {
     if (!user) return;
 
@@ -85,6 +87,7 @@ export const MemoProvider: React.FC<{ children: React.ReactNode }> = ({ children
       note: memoData.transcription,
       language: memoData.language || 'en-US',
       evaluationText: memoData.evaluationText,
+      meaning: memoData.meaning,
     });
   };
 
