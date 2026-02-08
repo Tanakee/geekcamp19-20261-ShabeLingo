@@ -28,34 +28,36 @@ export type SupportedLanguage =
   | 'tr-TR' 
   | 'pl-PL' 
   | 'nl-NL' 
-  | 'sv-SE';
+  | 'sv-SE'
+  | 'fil-PH';
 
 export const LANGUAGES: { code: SupportedLanguage; label: string; flag: string }[] = [
-  { code: 'en-US', label: 'English (US)', flag: '🇺🇸' },
-  { code: 'en-GB', label: 'English (UK)', flag: '🇬🇧' },
-  { code: 'en-AU', label: 'English (AU)', flag: '🇦🇺' },
-  { code: 'zh-CN', label: '中文 (简体)', flag: '🇨🇳' },
-  { code: 'zh-TW', label: '中文 (繁體)', flag: '🇹🇼' },
-  { code: 'es-ES', label: 'Español (ES)', flag: '🇪🇸' },
-  { code: 'es-MX', label: 'Español (MX)', flag: '🇲🇽' },
-  { code: 'fr-FR', label: 'Français (FR)', flag: '🇫🇷' },
-  { code: 'fr-CA', label: 'Français (CA)', flag: '🇨🇦' },
-  { code: 'de-DE', label: 'Deutsch', flag: '🇩🇪' },
-  { code: 'it-IT', label: 'Italiano', flag: '🇮🇹' },
+  { code: 'en-US', label: '英語 (アメリカ)', flag: '🇺🇸' },
+  { code: 'en-GB', label: '英語 (イギリス)', flag: '🇬🇧' },
+  { code: 'en-AU', label: '英語 (オーストラリア)', flag: '🇦🇺' },
+  { code: 'zh-CN', label: '中国語 (簡体字)', flag: '🇨🇳' },
+  { code: 'zh-TW', label: '中国語 (繁体字)', flag: '🇹🇼' },
+  { code: 'es-ES', label: 'スペイン語 (スペイン)', flag: '🇪🇸' },
+  { code: 'es-MX', label: 'スペイン語 (メキシコ)', flag: '🇲🇽' },
+  { code: 'fr-FR', label: 'フランス語 (フランス)', flag: '🇫🇷' },
+  { code: 'fr-CA', label: 'フランス語 (カナダ)', flag: '🇨🇦' },
+  { code: 'de-DE', label: 'ドイツ語', flag: '🇩🇪' },
+  { code: 'it-IT', label: 'イタリア語', flag: '🇮🇹' },
   { code: 'ja-JP', label: '日本語', flag: '🇯🇵' },
-  { code: 'ko-KR', label: '한국어', flag: '🇰🇷' },
-  { code: 'pt-BR', label: 'Português (BR)', flag: '🇧🇷' },
-  { code: 'pt-PT', label: 'Português (PT)', flag: '🇵🇹' },
-  { code: 'ru-RU', label: 'Русский', flag: '🇷🇺' },
-  { code: 'ar-SA', label: 'العربية', flag: '🇸🇦' },
-  { code: 'hi-IN', label: 'हिन्दी', flag: '🇮🇳' },
-  { code: 'th-TH', label: 'ไทย', flag: '🇹🇭' },
-  { code: 'vi-VN', label: 'Tiếng Việt', flag: '🇻🇳' },
-  { code: 'id-ID', label: 'Bahasa Indonesia', flag: '🇮🇩' },
-  { code: 'tr-TR', label: 'Türkçe', flag: '🇹🇷' },
-  { code: 'pl-PL', label: 'Polski', flag: '🇵🇱' },
-  { code: 'nl-NL', label: 'Nederlands', flag: '🇳🇱' },
-  { code: 'sv-SE', label: 'Svenska', flag: '🇸🇪' },
+  { code: 'ko-KR', label: '韓国語', flag: '🇰🇷' },
+  { code: 'pt-BR', label: 'ポルトガル語 (ブラジル)', flag: '🇧🇷' },
+  { code: 'pt-PT', label: 'ポルトガル語 (ポルトガル)', flag: '🇵🇹' },
+  { code: 'ru-RU', label: 'ロシア語', flag: '🇷🇺' },
+  { code: 'ar-SA', label: 'アラビア語', flag: '🇸🇦' },
+  { code: 'hi-IN', label: 'ヒンディー語', flag: '🇮🇳' },
+  { code: 'th-TH', label: 'タイ語', flag: '🇹🇭' },
+  { code: 'vi-VN', label: 'ベトナム語', flag: '🇻🇳' },
+  { code: 'id-ID', label: 'インドネシア語', flag: '🇮🇩' },
+  { code: 'tr-TR', label: 'トルコ語', flag: '🇹🇷' },
+  { code: 'pl-PL', label: 'ポーランド語', flag: '🇵🇱' },
+  { code: 'nl-NL', label: 'オランダ語', flag: '🇳🇱' },
+  { code: 'sv-SE', label: 'スウェーデン語', flag: '🇸🇪' },
+  { code: 'fil-PH', label: 'タガログ語', flag: '🇵🇭' },
 ];
 
 export interface Memo {

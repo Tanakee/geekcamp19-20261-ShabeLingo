@@ -104,7 +104,9 @@ export function CategorySelector({ selectedCategoryIds, onSelect, multiSelect = 
     <View style={styles.container}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
         {categories.map((cat) => {
-          const isSelected = selectedCategoryIds.includes(cat.id);
+          // Filter out empty string IDs
+          const validSelectedIds = selectedCategoryIds.filter(id => id !== '');
+          const isSelected = validSelectedIds.includes(cat.id);
           return (
             <TouchableOpacity
               key={cat.id}
