@@ -162,8 +162,27 @@ export default function MemoDetailScreen() {
             </Text>
         </View>
 
-        {/* Main Text */}
-        <Text style={styles.originalText}>{memo.originalText}</Text>
+        {/* Main Text (Romanized/Learning Word) */}
+        <View>
+          <Text style={styles.label}>学習したい言葉</Text>
+          <Text style={styles.originalText}>{memo.originalText}</Text>
+        </View>
+
+        {/* Evaluation Text (Native Script) */}
+        {memo.evaluationText && (
+          <View>
+            <Text style={styles.label}>発音評価用ターゲット</Text>
+            <Text style={styles.nativeText}>{memo.evaluationText}</Text>
+          </View>
+        )}
+
+        {/* Meaning (Japanese) */}
+        {memo.meaning && (
+          <View style={styles.noteContainer}>
+              <Text style={styles.noteLabel}>意味・メモ</Text>
+              <Text style={styles.noteText}>{memo.meaning}</Text>
+          </View>
+        )}
 
         {/* Image */}
         {memo.imageUrl && (
@@ -204,10 +223,10 @@ export default function MemoDetailScreen() {
             </View>
         )}
 
-        {/* Notes / Transcription */}
-        {memo.note && (
+        {/* Notes / Transcription (Legacy) */}
+        {memo.note && !memo.meaning && (
             <View style={styles.noteContainer}>
-                <Text style={styles.noteLabel}>メモ・翻訳</Text>
+                <Text style={styles.noteLabel}>メモ・翻訳(旧)</Text>
                 <Text style={styles.noteText}>{memo.note}</Text>
             </View>
         )}
@@ -334,5 +353,17 @@ const styles = StyleSheet.create({
     color: '#000',
     fontSize: 16,
     lineHeight: 24,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.mutedForeground,
+    marginBottom: 4,
+  },
+  nativeText: {
+    fontSize: 20,
+    color: Colors.foreground,
+    lineHeight: 28,
+    fontWeight: '500', 
   },
 });

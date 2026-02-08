@@ -9,6 +9,7 @@ import { CategorySelector } from '../components/ui/CategorySelector';
 import { useMemoContext } from '../context/MemoContext';
 import { useAuth } from '../context/AuthContext';
 import { subscribeCategories, addCategory } from '../lib/firestore';
+import { translateText } from '../lib/translator';
 import { Category, LANGUAGES, SupportedLanguage, Memo } from '../types';
 import { 
   useAudioRecorder, 
@@ -58,6 +59,7 @@ export default function CreateMemoScreen() {
   
   const [text, setText] = useState('');
   const [evaluationText, setEvaluationText] = useState('');
+  const [meaning, setMeaning] = useState('');
   const [transcription, setTranscription] = useState('');
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
@@ -66,6 +68,7 @@ export default function CreateMemoScreen() {
   const [showLanguageModal, setShowLanguageModal] = useState(false);
   const [languageSearch, setLanguageSearch] = useState('');
   const [language, setLanguage] = useState<SupportedLanguage | undefined>(undefined);
+  const [isTranslating, setIsTranslating] = useState(false);
   
   // Audio State (expo-audio)
   const [audioUri, setAudioUri] = useState<string | undefined>(params.audioUri);
@@ -104,6 +107,7 @@ export default function CreateMemoScreen() {
         setEditingMemo(memo);
         setText(memo.originalText || '');
         setEvaluationText(memo.evaluationText || '');
+        setMeaning(memo.meaning || '');
         setTranscription(memo.note || '');
         setSelectedCategoryId(memo.categoryIds && memo.categoryIds.length > 0 ? memo.categoryIds[0] : '');
         setLanguage(memo.language || 'en-US');
@@ -112,6 +116,34 @@ export default function CreateMemoScreen() {
       }
     }
   }, [isEditMode, params.editMemoId, memos]);
+
+  // Auto-translate text to evaluation text when language is selected
+  useEffect(() => {
+    const autoTranslate = async () => {
+      // Only translate if:
+      // 1. Text is not empty
+      // 2. Language is selected
+      // 3. Not currently editing a memo (to avoid overwriting existing evaluation text)
+      // 4. Evaluation text is empty (user hasn't manually entered anything)
+      if (text.trim() && language && !isEditMode && !evaluationText.trim() && !isTranslating) {
+        setIsTranslating(true);
+        try {
+          const translated = await translateText(text, language);
+          if (translated) {
+            setEvaluationText(translated);
+          }
+        } catch (error) {
+          console.error('Auto-translation error:', error);
+        } finally {
+          setIsTranslating(false);
+        }
+      }
+    };
+
+    // Debounce the translation to avoid too many API calls
+    const timer = setTimeout(autoTranslate, 1000);
+    return () => clearTimeout(timer);
+  }, [text, language]);
 
   const handleImageSourceSelect = () => {
     console.log('Opening image source modal...');
@@ -234,6 +266,7 @@ export default function CreateMemoScreen() {
         await addMemo({
           text,
           evaluationText,
+          meaning,
           category: selectedCategoryId || '',
           imageUrl: imageUri,
           audioUrl: audioUri,
@@ -267,10 +300,10 @@ export default function CreateMemoScreen() {
       <ScrollView contentContainerStyle={styles.content}>
         {/* Text Input */}
         <View style={styles.section}>
-          <Text style={styles.label}>学習したい言葉</Text>
+          <Text style={styles.label}>学習したい言葉(ローマ字表記)</Text>
           <TextInput
             style={styles.input}
-            placeholder="例: はろー"
+            placeholder="例: annyeonghaseyo"
             value={text}
             onChangeText={setText}
             autoFocus
@@ -316,22 +349,21 @@ export default function CreateMemoScreen() {
 
         {/* Evaluation Text Input */}
         <View style={styles.section}>
-          <Text style={styles.label}>発音評価用ターゲット (任意)</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            <Text style={styles.label}>発音評価用ターゲット (任意)</Text>
+            {isTranslating && (
+              <Text style={{ color: Colors.primary, fontSize: 12 }}>翻訳中...</Text>
+            )}
+          </View>
           <Text style={styles.hint}>
-            {language?.startsWith('zh-') 
+            {!language
+              ? '言語を選択してください'
+              : language !== 'ja-JP' && language !== 'en-US' && language !== 'en-GB' && language !== 'en-AU'
+              ? '「学習したい言葉」に日本語で入力すると、自動的に翻訳されます。'
+              : language.startsWith('zh-') 
               ? 'ピンイン(拼音)で入力してください(例: ni hao)' 
               : language === 'ja-JP'
               ? 'ローマ字で入力してください(例: konnichiwa)'
-              : language === 'ko-KR'
-              ? 'ハングル文字で入力してください(例: 안녕하세요)'
-              : language === 'ar-SA'
-              ? 'アラビア文字で入力してください(例: مرحبا)'
-              : language === 'hi-IN'
-              ? 'デーヴァナーガリー文字で入力してください(例: नमस्ते)'
-              : language === 'th-TH'
-              ? 'タイ文字で入力してください(例: สวัสดี)'
-              : language === 'ru-RU'
-              ? 'キリル文字で入力してください(例: привет)'
               : '正しいスペルを入力してください(例: Hello)'}
           </Text>
           <TextInput
@@ -348,6 +380,20 @@ export default function CreateMemoScreen() {
             }
             value={evaluationText}
             onChangeText={setEvaluationText}
+            editable={!isTranslating}
+          />
+        </View>
+
+        {/* Meaning/Note Input */}
+        <View style={styles.section}>
+          <Text style={styles.label}>意味・メモ</Text>
+          <TextInput
+            style={[styles.input, styles.textArea]}
+            placeholder="日本語で意味を入力してください"
+            value={meaning}
+            onChangeText={setMeaning}
+            multiline
+            numberOfLines={3}
           />
         </View>
 
@@ -496,19 +542,6 @@ export default function CreateMemoScreen() {
                     />
                 )}
             </View>
-        </View>
-
-        {/* Notes */}
-        <View style={styles.section}>
-          <Text style={styles.label}>意味・メモ</Text>
-          <TextInput
-            style={[styles.input, styles.textArea]}
-            placeholder="翻訳やメモなど"
-            value={transcription}
-            onChangeText={setTranscription}
-            multiline
-            numberOfLines={4}
-          />
         </View>
 
         <Button
