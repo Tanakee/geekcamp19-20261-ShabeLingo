@@ -31,14 +31,15 @@ export function Flashcard({ memo, isRevealed, onFlip }: FlashcardProps) {
     outputRange: ['180deg', '360deg'],
   });
 
+  // Prevent seeing through the back card by tightening the opacity transition
   const frontOpacity = flipAnimation.interpolate({
-    inputRange: [0, 89, 90, 180],
-    outputRange: [1, 1, 0, 0],
+    inputRange: [89.9, 90],
+    outputRange: [1, 0],
   });
 
   const backOpacity = flipAnimation.interpolate({
-    inputRange: [0, 89, 90, 180],
-    outputRange: [0, 0, 1, 1],
+    inputRange: [89.9, 90],
+    outputRange: [0, 1],
   });
 
   return (

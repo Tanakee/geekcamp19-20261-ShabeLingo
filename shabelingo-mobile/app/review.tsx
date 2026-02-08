@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, SafeAreaView, Alert, ActivityIndicator } from 'react-native';
+import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, Alert, ActivityIndicator, Animated } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
 import { ChevronLeft, RefreshCw, Check, Mic, Square, Play } from 'lucide-react-native';
 import { Colors, Layout } from '../constants/Colors';
@@ -22,7 +22,7 @@ import {
   AudioQuality
 } from 'expo-audio';
 
-// (AZURE_RECORDING_OPTIONS omitted, assuming same)
+// Custom recording options for Azure compatibility
 const AZURE_RECORDING_OPTIONS = {
   ...RecordingPresets.HIGH_QUALITY,
   android: {
@@ -62,6 +62,8 @@ export default function ReviewScreen() {
   const [score, setScore] = useState<number | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
   const [mode, setMode] = useState<'daily' | 'random' | 'none'>('none');
+  
+  const fadeAnim = useRef(new Animated.Value(1)).current;
 
   // Load Session Logic
   const loadSession = async (modeType: 'daily' | 'random' = 'daily') => {
@@ -127,11 +129,6 @@ export default function ReviewScreen() {
     // Update SRS if we have a score
     if (currentMemo && score !== null) {
         // Convert score to grade
-        // 90+ = 5 (Perfect)
-        // 80+ = 4 (Good)
-        // 70+ = 3 (Pass)
-        // 60+ = 2 (Hard)
-        // <60 = 1 (Fail)
         let grade: Grade = 1;
         if (score >= 90) grade = 5;
         else if (score >= 80) grade = 4;
@@ -154,10 +151,22 @@ export default function ReviewScreen() {
     }
 
     if (currentIndex < reviewMemos.length - 1) {
-      setCurrentIndex(prev => prev + 1);
-      setIsRevealed(false);
-      setSessionState('reading');
-      setScore(null);
+      Animated.timing(fadeAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }).start(() => {
+        setCurrentIndex(prev => prev + 1);
+        setIsRevealed(false);
+        setSessionState('reading');
+        setScore(null);
+
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 200,
+          useNativeDriver: true,
+        }).start();
+      });
     } else {
       if (mode === 'daily') {
         Alert.alert('お疲れ様でした！', '本日の復習セッションは完了です。', [
@@ -290,45 +299,48 @@ export default function ReviewScreen() {
       </View>
 
       <View style={styles.main}>
-        <Flashcard 
-          memo={currentMemo} 
-          isRevealed={isRevealed} 
-          onFlip={() => setIsRevealed(prev => !prev)} 
-        />
+        <Animated.View style={{ flex: 1, opacity: fadeAnim }}>
+            <Flashcard 
+            key={currentMemo.id}
+            memo={currentMemo} 
+            isRevealed={isRevealed} 
+            onFlip={() => setIsRevealed(prev => !prev)} 
+            />
 
-        <View style={styles.interaction}>
-          {sessionState === 'reading' ? (
-            <View style={styles.recordArea}>
-              <Text style={styles.instruction}>
-                  {analyzing ? "診断中..." : "タップして発音"}
-              </Text>
-              <Button 
-                variant={recorderState.isRecording ? 'destructive' : 'primary'}
-                size="lg"
-                icon={recorderState.isRecording ? <Square size={32} color="#fff" /> : <Mic size={32} color="#fff" />}
-                onPress={recorderState.isRecording ? stopRecording : startRecording}
-                style={styles.recordBtn}
-                disabled={analyzing}
-              />
-              {!recorderState.isRecording && !analyzing && <Button variant="ghost" title="スキップ" onPress={handleNext} />}
-            </View>
-          ) : (
-             <View style={styles.resultArea}>
-                <View style={styles.scoreBadge}>
-                   <Text style={styles.scoreVal}>{score}</Text>
-                   <Text style={styles.scoreLbl}>SCORE</Text>
-                </View>
-                <Text style={styles.feedback}>
-                    {score && score >= 80 ? 'Great job!' : score && score >= 60 ? 'Good!' : 'Keep practicing!'}
+            <View style={styles.interaction}>
+            {sessionState === 'reading' ? (
+                <View style={styles.recordArea}>
+                <Text style={styles.instruction}>
+                    {analyzing ? "診断中..." : "タップして発音"}
                 </Text>
-                
-                <View style={styles.actions}>
-                  <Button variant="secondary" title="リトライ" icon={<RefreshCw size={20} color="#000" />} onPress={() => setSessionState('reading')} style={{ flex: 1 }} />
-                  <Button variant="primary" title="次へ" icon={<Check size={20} color="#fff" />} onPress={handleNext} style={{ flex: 1 }} />
+                <Button 
+                    variant={recorderState.isRecording ? 'destructive' : 'primary'}
+                    size="lg"
+                    icon={recorderState.isRecording ? <Square size={32} color="#fff" /> : <Mic size={32} color="#fff" />}
+                    onPress={recorderState.isRecording ? stopRecording : startRecording}
+                    style={styles.recordBtn}
+                    disabled={analyzing}
+                />
+                {!recorderState.isRecording && !analyzing && <Button variant="ghost" title="スキップ" onPress={handleNext} />}
                 </View>
-             </View>
-          )}
-        </View>
+            ) : (
+                <View style={styles.resultArea}>
+                    <View style={styles.scoreBadge}>
+                    <Text style={styles.scoreVal}>{score}</Text>
+                    <Text style={styles.scoreLbl}>SCORE</Text>
+                    </View>
+                    <Text style={styles.feedback}>
+                        {score && score >= 80 ? 'Great job!' : score && score >= 60 ? 'Good!' : 'Keep practicing!'}
+                    </Text>
+                    
+                    <View style={styles.actions}>
+                    <Button variant="secondary" title="リトライ" icon={<RefreshCw size={20} color="#000" />} onPress={() => setSessionState('reading')} style={{ flex: 1 }} />
+                    <Button variant="primary" title="次へ" icon={<Check size={20} color="#fff" />} onPress={handleNext} style={{ flex: 1 }} />
+                    </View>
+                </View>
+            )}
+            </View>
+        </Animated.View>
       </View>
     </SafeAreaView>
   );
