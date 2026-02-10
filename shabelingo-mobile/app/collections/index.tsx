@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, Modal, TextInput, ActivityIndicator, SafeAreaView, Platform, TouchableWithoutFeedback, Keyboard, KeyboardAvoidingView } from 'react-native';
-import { useRouter } from 'expo-router';
-import { Plus, Trash2, Folder, ChevronRight, Share2, Play } from 'lucide-react-native';
+import { useRouter, Stack } from 'expo-router';
+import { Plus, Trash2, Folder, ChevronRight, Share2, Play, ChevronLeft } from 'lucide-react-native';
 import { useAuth } from '../../context/AuthContext';
 import { Collection } from '../../types';
 import { subscribeCollections, createCollection, deleteCollection } from '../../lib/collections';
@@ -97,15 +97,23 @@ export default function CollectionsScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>Collections</Text>
-        <Button 
-          variant="ghost" 
-          size="icon" 
-          icon={<Plus size={24} color={Colors.primary} />} 
-          onPress={() => setModalVisible(true)} 
-        />
-      </View>
+      <Stack.Screen 
+        options={{
+          title: 'Collections',
+          headerLargeTitle: true,
+          headerShadowVisible: false,
+          headerStyle: { backgroundColor: Colors.background },
+          headerBackTitle: '', // Hide back button text
+          headerRight: () => (
+             <Button 
+               variant="ghost" 
+               size="icon" 
+               icon={<Plus size={24} color={Colors.primary} />} 
+               onPress={() => setModalVisible(true)} 
+             />
+          ),
+        }} 
+      />
 
       {loading ? (
         <View style={styles.center}>
@@ -185,15 +193,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Layout.padding,
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
   },
   title: {
     fontSize: 24,
