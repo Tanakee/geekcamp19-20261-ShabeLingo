@@ -114,3 +114,27 @@ export interface PronunciationResult {
     errorType?: 'None' | 'Omission' | 'Insertion' | 'Mispronunciation';
   }[];
 }
+
+export interface Collection {
+  id: string;
+  userId: string;
+  title: string;
+  description?: string;
+  memoIds: string[]; // List of memo IDs belonging to this collection
+  isPublic: boolean; // Not used immediately but for future compatibility
+  themeColor?: string; // e.g. '#FF5733'
+  createdAt: number;
+  updatedAt: number;
+}
+
+// Immutable snapshot for sharing
+export interface SharedCollection {
+  id: string;         // Shared ID
+  originalUserId: string;
+  originalCollectionId?: string; // Optional reference
+  title: string;
+  description?: string;
+  memos: Memo[];      // Deep copy of memo data (Snapshot)
+  createdAt: number;
+  downloadCount: number;
+}

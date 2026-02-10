@@ -100,3 +100,65 @@ export const assessPronunciation = async (audioUri: string, referenceText: strin
     throw error;
   }
 };
+
+/**
+ * Azure Speech-to-Text APIを使用して音声を文字起こし
+ * @param audioUri 音声ファイルのURI
+ * @param language 認識する言語
+ * @returns 認識されたテキスト
+ */
+export const recognizeSpeech = async (audioUri: string, language: SupportedLanguage = 'en-US'): Promise<string | null> => {
+  if (!API_KEY || !REGION) {
+    throw new Error('Azure API Key or Region not set');
+  }
+
+  console.log(`[Azure] Starting Speech Recognition. Lang: ${language}`);
+  
+  const endpoint = `https://${REGION}.stt.speech.microsoft.com/speech/recognition/conversation/cognitiveservices/v1?language=${language}&format=detailed`;
+
+  const headers = {
+    'Ocp-Apim-Subscription-Key': API_KEY,
+    'Content-Type': 'audio/wav; codecs=audio/pcm; samplerate=16000',
+    'Accept': 'application/json',
+  };
+
+  try {
+    console.log('Reading audio file...');
+    const fileResp = await fetch(audioUri);
+    const audioBlob = await fileResp.blob();
+
+    console.log(`Sending audio to Azure (${language})...`, endpoint);
+    
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: headers as any,
+      body: audioBlob,
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Azure API Error Body:', errorText);
+      throw new Error(`Azure API failed with status ${response.status}: ${errorText}`);
+    }
+
+    const data = await response.json();
+    console.log('Azure Speech Recognition Response:', JSON.stringify(data, null, 2));
+
+    // Extract recognized text from response
+    if (data.NBest && data.NBest.length > 0) {
+      const bestResult = data.NBest[0];
+      return bestResult.Display || bestResult.Lexical || null;
+    }
+
+    if (data.DisplayText) {
+      return data.DisplayText;
+    }
+    
+    console.warn('Azure Response did not contain recognized text:', JSON.stringify(data));
+    return null;
+
+  } catch (error) {
+    console.error('Speech recognition failed:', error);
+    throw error;
+  }
+};

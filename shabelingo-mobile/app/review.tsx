@@ -252,7 +252,7 @@ export default function ReviewScreen() {
         <SafeAreaView style={styles.container}>
             <Stack.Screen options={{ headerShown: false }} />
             <View style={styles.header}>
-                <Button variant="ghost" size="icon" icon={<ChevronLeft size={24} color="#fff" />} onPress={() => router.back()} />
+                <Button variant="ghost" size="icon" icon={<ChevronLeft size={24} color={Colors.foreground} />} onPress={() => router.back()} />
             </View>
             <View style={[styles.main, { justifyContent: 'center', alignItems: 'center', gap: 24 }]}>
                 <View style={{ alignItems: 'center', gap: 8 }}>
@@ -281,7 +281,7 @@ export default function ReviewScreen() {
       
       {/* Header */}
       <View style={styles.header}>
-        <Button variant="ghost" size="icon" icon={<ChevronLeft size={24} color="#fff" />} onPress={() => router.back()} />
+        <Button variant="ghost" size="icon" icon={<ChevronLeft size={24} color={Colors.foreground} />} onPress={() => router.back()} />
         <View style={{ alignItems: 'center', gap: 4 }}>
           <Text style={styles.progress}>{currentIndex + 1} / {reviewMemos.length}</Text>
           {currentMemo.language && (
