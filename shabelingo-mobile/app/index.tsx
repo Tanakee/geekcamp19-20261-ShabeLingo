@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, FlatList, SafeAreaView, Image, TouchableOpacity, Modal, ScrollView, Animated, Alert } from 'react-native';
 import { Stack, useRouter } from 'expo-router';
-import { Plus, Play, Filter, X, Mic, Square, List } from 'lucide-react-native';
+import { Plus, Play, Filter, X, Mic, Square, List, Folder } from 'lucide-react-native';
 import { Colors, Layout } from '../constants/Colors';
 import { Button } from '../components/ui/Button';
 import { Card } from '../components/ui/Card';
@@ -372,6 +372,9 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>ShabeLingo</Text>
         <View style={styles.headerActions}>
+          <TouchableOpacity onPress={() => router.push('/collections')} style={styles.headerBtn}>
+            <Folder size={24} color={Colors.foreground} />
+          </TouchableOpacity>
           <TouchableOpacity onPress={() => setShowFilterModal(true)} style={styles.headerBtn}>
             <Filter size={24} color={activeFiltersCount > 0 ? Colors.primary : Colors.foreground} />
             {activeFiltersCount > 0 && <View style={styles.badgeDot} />}
