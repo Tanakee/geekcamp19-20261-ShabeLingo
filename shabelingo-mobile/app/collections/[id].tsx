@@ -1,22 +1,24 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, Modal, ActivityIndicator, ScrollView, SafeAreaView, Share } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, Modal, ActivityIndicator, ScrollView, SafeAreaView, Share, Platform } from 'react-native';
 import { useLocalSearchParams, useRouter, Stack } from 'expo-router';
-import { doc, getDoc, onSnapshot } from 'firebase/firestore';
+import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { useAuth } from '../../context/AuthContext';
-import { Collection, Memo, LANGUAGES } from '../../types';
+import { Collection, Memo } from '../../types';
 import { getCollectionMemos, addMemosToCollection, removeMemosFromCollection, createSharedCollection } from '../../lib/collections';
-import { subscribeMemos } from '../../lib/firestore'; // To get user's full library
+import { subscribeMemos } from '../../lib/firestore'; 
 import { Colors, Layout } from '../../constants/Colors';
 import { Button } from '../../components/ui/Button';
-import { ChevronLeft, Plus, Share2, Trash2, X, Check, Copy } from 'lucide-react-native';
+import { ChevronLeft, Plus, Share2, X, Check, Copy } from 'lucide-react-native';
 import QRCode from 'react-native-qrcode-svg';
 import * as Linking from 'expo-linking';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function CollectionDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
   const { user } = useAuth();
+  const insets = useSafeAreaInsets();
 
   const [collection, setCollection] = useState<Collection | null>(null);
   const [memos, setMemos] = useState<Memo[]>([]);
@@ -26,7 +28,7 @@ export default function CollectionDetailScreen() {
   const [addModalVisible, setAddModalVisible] = useState(false);
   const [allMemos, setAllMemos] = useState<Memo[]>([]);
   const [selectedMemoIds, setSelectedMemoIds] = useState<Set<string>>(new Set());
-  
+
   // Share Modal
   const [shareModalVisible, setShareModalVisible] = useState(false);
   const [sharedId, setSharedId] = useState<string | null>(null);
@@ -68,7 +70,7 @@ export default function CollectionDetailScreen() {
       if (collection) {
           loadMemos();
       }
-  }, [collection?.memoIds]); // Depend on memoIds length or content
+  }, [collection?.memoIds]); 
 
   // Fetch all memos for selection
   useEffect(() => {
@@ -138,29 +140,42 @@ export default function CollectionDetailScreen() {
   };
 
   if (!collection) {
-    return <View style={styles.center}><ActivityIndicator /></View>;
+    return (
+      <View style={[styles.center, { backgroundColor: Colors.background }]}>
+         <Stack.Screen options={{ title: '', headerBackTitle: '', headerShadowVisible: false, headerStyle: { backgroundColor: Colors.background } }} />
+         <ActivityIndicator />
+      </View>
+    );
   }
 
   return (
-    <SafeAreaView style={styles.container}>
-      <Stack.Screen options={{ headerShown: false }} />
+    <View style={styles.container}>
+      <Stack.Screen 
+        options={{
+            headerShown: true,
+            headerTitle: () => (
+                <View style={{ alignItems: 'center' }}>
+                    <Text style={[styles.headerTitle, { fontSize: 16 }]}>{collection.title}</Text>
+                    <Text style={styles.headerSub}>{memos.length} items</Text>
+                </View>
+            ),
+            headerRight: () => (
+                <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    icon={<Share2 size={24} color={Colors.primary} />} 
+                    onPress={handleCreateShare} 
+                    disabled={sharing}
+                />
+            ),
+            headerBackTitle: '', // Hide "Collections" back text
+            headerTintColor: Colors.foreground,
+            headerShadowVisible: false,
+            headerStyle: { backgroundColor: Colors.background },
+            contentStyle: { backgroundColor: Colors.background }
+        }} 
+      />
       
-      {/* Header */}
-      <View style={styles.header}>
-        <Button variant="ghost" size="icon" icon={<ChevronLeft size={24} color={Colors.foreground} />} onPress={() => router.back()} />
-        <View style={{ flex: 1, alignItems: 'center' }}>
-            <Text style={styles.headerTitle}>{collection.title}</Text>
-            <Text style={styles.headerSub}>{memos.length} items</Text>
-        </View>
-        <Button 
-            variant="ghost" 
-            size="icon" 
-            icon={<Share2 size={24} color={Colors.primary} />} 
-            onPress={handleCreateShare} 
-            disabled={sharing}
-        />
-      </View>
-
       <ScrollView contentContainerStyle={styles.content}>
         {collection.description ? (
             <Text style={styles.description}>{collection.description}</Text>
@@ -196,9 +211,9 @@ export default function CollectionDetailScreen() {
       </ScrollView>
 
       {/* Add Memos Modal */}
-      <Modal visible={addModalVisible} animationType="slide" onRequestClose={() => setAddModalVisible(false)}>
-          <View style={{ flex: 1, backgroundColor: Colors.background }}>
-            <SafeAreaView style={styles.modalContainer}>
+      <Modal visible={addModalVisible} animationType="slide" transparent={true} onRequestClose={() => setAddModalVisible(false)}>
+          <View style={{ flex: 1, backgroundColor: Colors.background, paddingTop: insets.top }}>
+            <View style={[styles.modalContainer, { paddingTop: 0 }]}>
                 <View style={styles.modalHeader}>
                     <Button variant="ghost" title="Cancel" onPress={() => setAddModalVisible(false)} />
                     <Text style={styles.modalTitle}>Select Memos</Text>
@@ -224,7 +239,7 @@ export default function CollectionDetailScreen() {
                         </TouchableOpacity>
                     )}
                 />
-            </SafeAreaView>
+            </View>
           </View>
       </Modal>
 
@@ -249,7 +264,7 @@ export default function CollectionDetailScreen() {
                   
                   <View style={styles.dialogActions}>
                       <Button variant="secondary" title="Copy Link" icon={<Copy size={16} color={Colors.foreground} />} onPress={() => {
-                          Linking.openURL(shareLink); // Just open for now, better to copy clipboard
+                          Linking.openURL(shareLink); 
                       }} style={{ flex: 1 }} />
                       <Button variant="primary" title="Share via..." icon={<Share2 size={16} color="#fff" />} onPress={handleSystemShare} style={{ flex: 1 }} />
                   </View>
@@ -259,7 +274,7 @@ export default function CollectionDetailScreen() {
           </View>
       </Modal>
 
-    </SafeAreaView>
+    </View>
   );
 }
 
@@ -267,13 +282,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Colors.background,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: Colors.border,
   },
   headerTitle: {
     fontSize: 18,
