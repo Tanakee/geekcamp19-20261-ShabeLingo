@@ -55,7 +55,7 @@ export function Flashcard({ memo, isRevealed, onFlip }: FlashcardProps) {
             },
           ]}
         >
-          <Text style={styles.text}>{memo.note || memo.translatedText || "(ヒントなし)"}</Text>
+          <Text style={styles.text}>{memo.meaning || memo.translatedText || memo.note || "(ヒントなし)"}</Text>
           <Text style={styles.subText}>タップして答えを表示</Text>
         </Animated.View>
 
