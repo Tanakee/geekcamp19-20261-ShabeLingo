@@ -197,33 +197,35 @@ export default function CollectionDetailScreen() {
 
       {/* Add Memos Modal */}
       <Modal visible={addModalVisible} animationType="slide" onRequestClose={() => setAddModalVisible(false)}>
-          <SafeAreaView style={styles.modalContainer}>
-            <View style={styles.modalHeader}>
-                <Button variant="ghost" title="Cancel" onPress={() => setAddModalVisible(false)} />
-                <Text style={styles.modalTitle}>Select Memos</Text>
-                <Button 
-                    title={`Add (${selectedMemoIds.size})`} 
-                    onPress={handleAddMemos} 
-                    disabled={selectedMemoIds.size === 0}
+          <View style={{ flex: 1, backgroundColor: Colors.background }}>
+            <SafeAreaView style={styles.modalContainer}>
+                <View style={styles.modalHeader}>
+                    <Button variant="ghost" title="Cancel" onPress={() => setAddModalVisible(false)} />
+                    <Text style={styles.modalTitle}>Select Memos</Text>
+                    <Button 
+                        title={`Add (${selectedMemoIds.size})`} 
+                        onPress={handleAddMemos} 
+                        disabled={selectedMemoIds.size === 0}
+                    />
+                </View>
+                <FlatList
+                    data={allMemos.filter(m => !collection.memoIds.includes(m.id))} // Exclude already added
+                    keyExtractor={item => item.id}
+                    renderItem={({ item }) => (
+                        <TouchableOpacity 
+                            style={[styles.selectCard, selectedMemoIds.has(item.id) && styles.selectedCard]}
+                            onPress={() => toggleSelection(item.id)}
+                        >
+                            <View style={{ flex: 1 }}>
+                                <Text style={styles.memoOriginal}>{item.originalText}</Text>
+                                <Text style={styles.memoMeaning}>{item.meaning || item.translatedText}</Text>
+                            </View>
+                            {selectedMemoIds.has(item.id) && <Check size={20} color={Colors.primary} />}
+                        </TouchableOpacity>
+                    )}
                 />
-            </View>
-            <FlatList
-                data={allMemos.filter(m => !collection.memoIds.includes(m.id))} // Exclude already added
-                keyExtractor={item => item.id}
-                renderItem={({ item }) => (
-                    <TouchableOpacity 
-                        style={[styles.selectCard, selectedMemoIds.has(item.id) && styles.selectedCard]}
-                        onPress={() => toggleSelection(item.id)}
-                    >
-                        <View style={{ flex: 1 }}>
-                            <Text style={styles.memoOriginal}>{item.originalText}</Text>
-                            <Text style={styles.memoMeaning}>{item.meaning || item.translatedText}</Text>
-                        </View>
-                        {selectedMemoIds.has(item.id) && <Check size={20} color={Colors.primary} />}
-                    </TouchableOpacity>
-                )}
-            />
-          </SafeAreaView>
+            </SafeAreaView>
+          </View>
       </Modal>
 
       {/* Share Modal */}
